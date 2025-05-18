@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -32,6 +33,47 @@ const Login = () => {
     try {
       setIsSubmitting(true);
       await login(email, password);
+      
+      // After successful login, let's check for orders to diagnose issues
+      try {
+        console.log("Checking orders after successful login...");
+        
+        // Get user info
+        const { data: { user } } = await supabase.auth.getUser();
+        console.log("Authenticated user:", user);
+        
+        // Query available orders
+        const { data: availableOrders, error: orderError } = await supabase
+          .from("orders")
+          .select(`
+            id, order_number, status, runner_id, merchant_id, total_amount, created_at
+          `)
+          .eq("status", "ready")
+          .is("runner_id", null);
+        
+        console.log("Available orders query result:", availableOrders, orderError);
+        
+        if (orderError) {
+          console.error("Error fetching available orders:", orderError);
+        } else {
+          console.log("Number of available orders found:", availableOrders?.length || 0);
+        }
+        
+        // Check all orders regardless of status/runner
+        const { data: allOrders, error: allOrdersError } = await supabase
+          .from("orders")
+          .select("id, status, runner_id, created_at")
+          .limit(20);
+        
+        console.log("All orders (up to 20):", allOrders, allOrdersError);
+        
+        if (allOrdersError) {
+          console.error("Error fetching all orders:", allOrdersError);
+        }
+      } catch (diagError) {
+        console.error("Diagnostic check error:", diagError);
+      }
+      
       toast({
         title: "Login successful",
         description: "Welcome to Nutrix Runner",
@@ -46,6 +88,7 @@ const Login = () => {
         setError("Invalid email or password. Please check your credentials.");
       } else if (error.code === '42P17') {
         // This handles the RLS policy error but we'll still proceed to dashboard
+        console.log("RLS policy error detected during login, but continuing to dashboard");
         toast({
           title: "Login successful",
           description: "Welcome to Nutrix Runner. Some data might load with limited access.",

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -9,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, ShoppingBag, Phone, User } from "lucide-react";
+import { MapPin, ShoppingBag, Phone, User, RefreshCcw } from "lucide-react";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -19,7 +20,7 @@ interface Order {
   order_number: string;
   status: "ready" | "picked_up" | "in_transit" | "delivered";
   runner_id: string | null;
-  merchant_id?: string; // Make this optional since it might not be returned directly
+  merchant_id?: string;
   merchant: {
     name: string;
     location: string;
@@ -65,6 +66,7 @@ const Dashboard = () => {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [debugInfo, setDebugInfo] = useState<string | null>(null);
   
   // Status styling
   const statusLabels = {
@@ -93,9 +95,23 @@ const Dashboard = () => {
     try {
       setIsLoading(true);
       setError(null);
+      setDebugInfo(null);
       
       console.log("Fetching orders for tab:", activeTab);
       console.log("Current user ID:", currentUser.id);
+      
+      // First, check if there are any orders in the table at all
+      const { count: totalOrdersCount, error: countError } = await supabase
+        .from("orders")
+        .select("*", { count: "exact", head: true });
+        
+      if (countError) {
+        console.error("Error counting total orders:", countError);
+        setDebugInfo(`Error counting orders: ${countError.message || JSON.stringify(countError)}`);
+      } else {
+        console.log("Total orders in database:", totalOrdersCount);
+        setDebugInfo(`Total orders in database: ${totalOrdersCount || 0}`);
+      }
       
       let query = supabase
         .from("orders")
@@ -104,6 +120,7 @@ const Dashboard = () => {
           order_number,
           status,
           runner_id,
+          merchant_id,
           total_amount,
           created_at,
           delivered_at,
@@ -152,6 +169,8 @@ const Dashboard = () => {
       
       if (fetchError) {
         console.error("Query error:", fetchError);
+        setError(`Failed to load orders: ${fetchError.message || "Unknown error"}`);
+        setDebugInfo(prevInfo => `${prevInfo || ''}\nQuery error: ${fetchError.message || JSON.stringify(fetchError)}`);
         throw fetchError;
       }
       
@@ -161,26 +180,32 @@ const Dashboard = () => {
       // Debugging any data issues
       if (data && data.length > 0) {
         console.log("Sample order data:", data[0]);
+        setDebugInfo(prevInfo => `${prevInfo || ''}\nOrders found for current tab: ${data.length}`);
       } else {
         console.log("No orders found for the current query");
+        setDebugInfo(prevInfo => `${prevInfo || ''}\nNo orders found matching the query criteria. Check if orders have status="ready" and runner_id=null (for available tab).`);
         
-        // Check if there are any orders at all in the table
-        const { count, error: countError } = await supabase
-          .from("orders")
-          .select("*", { count: "exact", head: true });
-        
-        if (countError) {
-          console.error("Error counting orders:", countError);
-        } else {
-          console.log("Total orders in database:", count);
+        // If no orders found, check if there are any "ready" orders regardless of runner_id
+        if (activeTab === "available") {
+          const { data: readyOrders } = await supabase
+            .from("orders")
+            .select("id, status, runner_id")
+            .eq("status", "ready");
+            
+          console.log("All ready orders:", readyOrders);
+          setDebugInfo(prevInfo => `${prevInfo || ''}\nAll orders with status="ready": ${readyOrders?.length || 0}`);
+          
+          if (readyOrders && readyOrders.length > 0) {
+            setDebugInfo(prevInfo => `${prevInfo || ''}\nNote: There are ready orders, but they may already be assigned to runners.`);
+          }
         }
       }
       
       // Type assertion to match the Order interface
       setOrders(data as Order[]);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error fetching orders:", err);
-      setError("Failed to load orders. Please try again later.");
+      setError(`Failed to load orders: ${err.message || "Please try again later."}`);
     } finally {
       setIsLoading(false);
     }
@@ -463,6 +488,14 @@ const Dashboard = () => {
     fetchEarnings();
   }, [currentUser]);
   
+  const handleManualRefresh = () => {
+    fetchOrders();
+    toast({
+      title: "Refreshing orders",
+      description: "Fetching the latest order data",
+    });
+  };
+  
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="container py-6 animate-fade-in">
@@ -537,11 +570,23 @@ const Dashboard = () => {
         
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid grid-cols-3 md:w-[400px] mb-6">
-            <TabsTrigger value="available">Available</TabsTrigger>
-            <TabsTrigger value="active">Active</TabsTrigger>
-            <TabsTrigger value="completed">Completed</TabsTrigger>
-          </TabsList>
+          <div className="flex justify-between items-center mb-6">
+            <TabsList className="grid grid-cols-3 md:w-[400px]">
+              <TabsTrigger value="available">Available</TabsTrigger>
+              <TabsTrigger value="active">Active</TabsTrigger>
+              <TabsTrigger value="completed">Completed</TabsTrigger>
+            </TabsList>
+            
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleManualRefresh}
+              className="flex items-center gap-2"
+            >
+              <RefreshCcw className="w-4 h-4" />
+              Refresh
+            </Button>
+          </div>
           
           {/* Available Orders Tab */}
           <TabsContent value="available">
@@ -554,8 +599,14 @@ const Dashboard = () => {
             )}
             
             {error && (
-              <div className="text-center py-12 bg-white rounded-lg border">
+              <div className="text-center py-6 bg-white rounded-lg border">
                 <p className="text-red-500">{error}</p>
+                {debugInfo && (
+                  <div className="mt-4 p-4 bg-gray-50 rounded text-left text-sm text-gray-700">
+                    <p className="font-semibold">Debug information:</p>
+                    <pre className="whitespace-pre-wrap">{debugInfo}</pre>
+                  </div>
+                )}
               </div>
             )}
             
@@ -565,10 +616,16 @@ const Dashboard = () => {
                 <p className="text-sm text-muted-foreground mt-2">
                   This could be because there are no orders with status "ready" and null runner_id
                 </p>
+                {debugInfo && (
+                  <div className="mt-4 p-4 bg-gray-50 rounded text-left text-sm text-gray-700">
+                    <p className="font-semibold">Debug information:</p>
+                    <pre className="whitespace-pre-wrap">{debugInfo}</pre>
+                  </div>
+                )}
                 <Button 
                   className="mt-4" 
                   variant="outline" 
-                  onClick={() => fetchOrders()}
+                  onClick={handleManualRefresh}
                 >
                   Refresh Orders
                 </Button>
