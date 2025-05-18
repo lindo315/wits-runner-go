@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -14,13 +13,13 @@ import { MapPin, ShoppingBag, Phone, User } from "lucide-react";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 
-// Define the types based on the database schema
+// Define the types based on the database schema and actual returned data
 interface Order {
   id: string;
   order_number: string;
   status: "ready" | "picked_up" | "in_transit" | "delivered";
   runner_id: string | null;
-  merchant_id: string;
+  merchant_id?: string; // Make this optional since it might not be returned directly
   merchant: {
     name: string;
     location: string;
@@ -148,7 +147,8 @@ const Dashboard = () => {
       
       if (fetchError) throw fetchError;
       
-      setOrders(data || []);
+      // Type assertion to match the Order interface
+      setOrders(data as Order[]);
     } catch (err) {
       console.error("Error fetching orders:", err);
       setError("Failed to load orders. Please try again later.");
