@@ -42,13 +42,13 @@ const Login = () => {
         const { data: { user } } = await supabase.auth.getUser();
         console.log("Authenticated user:", user);
         
-        // Query available orders
+        // Query available orders - now including pending status
         const { data: availableOrders, error: orderError } = await supabase
           .from("orders")
           .select(`
             id, order_number, status, runner_id, merchant_id, total_amount, created_at
           `)
-          .eq("status", "ready")
+          .in("status", ["ready", "pending"])
           .is("runner_id", null);
         
         console.log("Available orders query result:", availableOrders, orderError);
@@ -57,6 +57,14 @@ const Login = () => {
           console.error("Error fetching available orders:", orderError);
         } else {
           console.log("Number of available orders found:", availableOrders?.length || 0);
+          
+          if (availableOrders && availableOrders.length > 0) {
+            console.log("Available orders status breakdown:");
+            const pendingOrders = availableOrders.filter(order => order.status === "pending");
+            const readyOrders = availableOrders.filter(order => order.status === "ready");
+            console.log(`- Pending orders: ${pendingOrders.length}`);
+            console.log(`- Ready orders: ${readyOrders.length}`);
+          }
         }
         
         // Check all orders regardless of status/runner
@@ -69,6 +77,14 @@ const Login = () => {
         
         if (allOrdersError) {
           console.error("Error fetching all orders:", allOrdersError);
+        } else if (allOrders) {
+          // Count statuses
+          const statusCounts = allOrders.reduce((acc: Record<string, number>, order) => {
+            acc[order.status] = (acc[order.status] || 0) + 1;
+            return acc;
+          }, {});
+          
+          console.log("Order status counts:", statusCounts);
         }
       } catch (diagError) {
         console.error("Diagnostic check error:", diagError);

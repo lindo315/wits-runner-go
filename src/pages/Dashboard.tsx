@@ -18,7 +18,7 @@ import { supabase } from "@/integrations/supabase/client";
 interface Order {
   id: string;
   order_number: string;
-  status: "ready" | "picked_up" | "in_transit" | "delivered";
+  status: "pending" | "ready" | "picked_up" | "in_transit" | "delivered";
   runner_id: string | null;
   merchant_id?: string;
   merchant: {
@@ -70,6 +70,7 @@ const Dashboard = () => {
   
   // Status styling
   const statusLabels = {
+    pending: "Pending",
     ready: "Ready",
     picked_up: "Picked Up",
     in_transit: "In Transit",
@@ -77,6 +78,7 @@ const Dashboard = () => {
   };
   
   const statusColors = {
+    pending: "bg-yellow-100 text-yellow-800",
     ready: "bg-amber-100 text-amber-800",
     picked_up: "bg-blue-100 text-blue-800",
     in_transit: "bg-purple-100 text-purple-800",
@@ -145,10 +147,10 @@ const Dashboard = () => {
       
       switch (activeTab) {
         case "available":
-          // Debug logging
-          console.log("Querying available orders: status=ready, runner_id=null");
+          // Updated to include both 'ready' and 'pending' status orders that are not assigned to runners
+          console.log("Querying available orders: status in [ready, pending], runner_id=null");
           query = query
-            .eq("status", "ready")
+            .in("status", ["ready", "pending"])
             .is("runner_id", null);
           break;
         case "active":
@@ -162,7 +164,7 @@ const Dashboard = () => {
             .eq("runner_id", currentUser.id);
           break;
         default:
-          query = query.eq("status", "ready");
+          query = query.in("status", ["ready", "pending"]);
       }
       
       const { data, error: fetchError } = await query.order("created_at", { ascending: false });
@@ -183,20 +185,20 @@ const Dashboard = () => {
         setDebugInfo(prevInfo => `${prevInfo || ''}\nOrders found for current tab: ${data.length}`);
       } else {
         console.log("No orders found for the current query");
-        setDebugInfo(prevInfo => `${prevInfo || ''}\nNo orders found matching the query criteria. Check if orders have status="ready" and runner_id=null (for available tab).`);
+        setDebugInfo(prevInfo => `${prevInfo || ''}\nNo orders found matching the query criteria. Check if orders have status="pending" or "ready" and runner_id=null (for available tab).`);
         
-        // If no orders found, check if there are any "ready" orders regardless of runner_id
+        // If no orders found, check if there are any "ready" or "pending" orders regardless of runner_id
         if (activeTab === "available") {
-          const { data: readyOrders } = await supabase
+          const { data: availableOrders } = await supabase
             .from("orders")
             .select("id, status, runner_id")
-            .eq("status", "ready");
+            .in("status", ["ready", "pending"]);
             
-          console.log("All ready orders:", readyOrders);
-          setDebugInfo(prevInfo => `${prevInfo || ''}\nAll orders with status="ready": ${readyOrders?.length || 0}`);
+          console.log("All ready/pending orders:", availableOrders);
+          setDebugInfo(prevInfo => `${prevInfo || ''}\nAll orders with status="ready" or "pending": ${availableOrders?.length || 0}`);
           
-          if (readyOrders && readyOrders.length > 0) {
-            setDebugInfo(prevInfo => `${prevInfo || ''}\nNote: There are ready orders, but they may already be assigned to runners.`);
+          if (availableOrders && availableOrders.length > 0) {
+            setDebugInfo(prevInfo => `${prevInfo || ''}\nNote: There are ready/pending orders, but they may already be assigned to runners.`);
           }
         }
       }
@@ -614,7 +616,7 @@ const Dashboard = () => {
               <div className="text-center py-12 bg-white rounded-lg border">
                 <p className="text-muted-foreground">No available orders at the moment</p>
                 <p className="text-sm text-muted-foreground mt-2">
-                  This could be because there are no orders with status "ready" and null runner_id
+                  This could be because there are no orders with status "ready" or "pending" and null runner_id
                 </p>
                 {debugInfo && (
                   <div className="mt-4 p-4 bg-gray-50 rounded text-left text-sm text-gray-700">
@@ -639,8 +641,8 @@ const Dashboard = () => {
                         <div>
                           <div className="flex items-center gap-2 mb-2">
                             <h3 className="font-semibold">Order #{order.order_number}</h3>
-                            <Badge className={statusColors.ready}>
-                              {statusLabels.ready}
+                            <Badge className={statusColors[order.status]}>
+                              {statusLabels[order.status]}
                             </Badge>
                           </div>
                           <p className="text-sm text-muted-foreground mb-4">
