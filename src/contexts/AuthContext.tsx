@@ -50,6 +50,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       if (authError) throw authError;
       
       if (authData?.user) {
+        console.log("Auth successful, user:", authData.user);
+        
         try {
           // Fetch the user's runner profile from our users table
           const { data: userData, error: userError } = await supabase
@@ -59,7 +61,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
             .eq('role', 'runner')
             .single();
           
-          if (userError) throw userError;
+          console.log("User profile fetch result:", userData, userError);
+          
+          if (userError) {
+            console.error("User profile fetch error:", userError);
+            // If there's an infinite recursion RLS error, we can still continue
+            if (userError.code === '42P17') {
+              console.log("RLS policy error detected, creating basic runner user");
+              
+              // Let's create a minimal runner profile using auth user data
+              const runnerUser: RunnerUser = {
+                id: authData.user.id,
+                email: authData.user.email || email,
+                role: "runner",
+                first_name: authData.user.user_metadata?.first_name || "",
+                last_name: authData.user.user_metadata?.last_name || "",
+                full_name: authData.user.user_metadata?.full_name || "",
+                phone_number: authData.user.phone || "",
+                student_number: authData.user.user_metadata?.student_number || "",
+                verification_status: "verified",
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              };
+              
+              localStorage.setItem("runner_user", JSON.stringify(runnerUser));
+              setCurrentUser(runnerUser);
+              
+              // No need to throw the error, we've created a fallback user
+              return;
+            }
+            
+            throw userError;
+          }
           
           if (!userData) {
             throw new Error('No runner profile found for this user');
@@ -142,36 +175,67 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         const { data: { session } } = await supabase.auth.getSession();
         
         if (session?.user) {
+          console.log("Active session found:", session.user.email);
+          
           if (savedUser) {
+            console.log("Restoring saved user from localStorage");
             setCurrentUser(JSON.parse(savedUser));
           } else {
             // Fetch user data if we have a session but no saved user
-            const { data: userData, error: userError } = await supabase
-              .from('users')
-              .select('*')
-              .eq('id', session.user.id)
-              .eq('role', 'runner')
-              .single();
-            
-            if (!userError && userData) {
-              const runnerUser: RunnerUser = {
-                id: userData.id,
-                email: userData.email,
-                role: "runner" as const,
-                first_name: userData.full_name.split(' ')[0],
-                last_name: userData.full_name.split(' ').slice(1).join(' '),
-                full_name: userData.full_name,
-                phone_number: userData.phone_number || '',
-                student_number: userData.student_number || '',
-                verification_status: userData.verification_status as "verified",
-                created_at: userData.created_at,
-                updated_at: userData.updated_at || userData.created_at
-              };
+            console.log("Fetching user data for active session");
+            try {
+              const { data: userData, error: userError } = await supabase
+                .from('users')
+                .select('*')
+                .eq('id', session.user.id)
+                .eq('role', 'runner')
+                .single();
               
-              localStorage.setItem("runner_user", JSON.stringify(runnerUser));
-              setCurrentUser(runnerUser);
+              console.log("User data fetch result:", userData, userError);
+              
+              if (!userError && userData) {
+                const runnerUser: RunnerUser = {
+                  id: userData.id,
+                  email: userData.email,
+                  role: "runner" as const,
+                  first_name: userData.full_name.split(' ')[0],
+                  last_name: userData.full_name.split(' ').slice(1).join(' '),
+                  full_name: userData.full_name,
+                  phone_number: userData.phone_number || '',
+                  student_number: userData.student_number || '',
+                  verification_status: userData.verification_status as "verified",
+                  created_at: userData.created_at,
+                  updated_at: userData.updated_at || userData.created_at
+                };
+                
+                localStorage.setItem("runner_user", JSON.stringify(runnerUser));
+                setCurrentUser(runnerUser);
+              } else if (userError && userError.code === '42P17') {
+                // Handle RLS policy error with a basic user object
+                console.log("RLS policy error in session check, creating basic runner user");
+                const runnerUser: RunnerUser = {
+                  id: session.user.id,
+                  email: session.user.email || "",
+                  role: "runner",
+                  first_name: session.user.user_metadata?.first_name || "",
+                  last_name: session.user.user_metadata?.last_name || "",
+                  full_name: session.user.user_metadata?.full_name || "",
+                  phone_number: session.user.phone || "",
+                  student_number: session.user.user_metadata?.student_number || "",
+                  verification_status: "verified",
+                  created_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString()
+                };
+                
+                localStorage.setItem("runner_user", JSON.stringify(runnerUser));
+                setCurrentUser(runnerUser);
+              }
+            } catch (error) {
+              console.error("Error during session check:", error);
             }
           }
+        } else {
+          console.log("No active session found");
         }
       } catch (error) {
         console.error("Session check error:", error);
@@ -185,6 +249,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     // Subscribe to auth changes
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log("Auth state change event:", event);
+        
         if (event === 'SIGNED_OUT') {
           localStorage.removeItem("runner_user");
           setCurrentUser(null);

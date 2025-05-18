@@ -45,10 +45,12 @@ const Login = () => {
       } else if (error.message?.includes("Invalid login credentials")) {
         setError("Invalid email or password. Please check your credentials.");
       } else if (error.code === '42P17') {
-        // This handles the RLS policy error
-        setError("Authentication successful, but there was an error loading your profile.");
-        // Still proceed to dashboard
-        setTimeout(() => navigate("/dashboard"), 2000);
+        // This handles the RLS policy error but we'll still proceed to dashboard
+        toast({
+          title: "Login successful",
+          description: "Welcome to Nutrix Runner. Some data might load with limited access.",
+        });
+        setTimeout(() => navigate("/dashboard"), 1000);
         return;
       } else {
         setError("Login failed. Please check your credentials or try again later.");

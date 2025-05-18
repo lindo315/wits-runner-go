@@ -94,6 +94,9 @@ const Dashboard = () => {
       setIsLoading(true);
       setError(null);
       
+      console.log("Fetching orders for tab:", activeTab);
+      console.log("Current user ID:", currentUser.id);
+      
       let query = supabase
         .from("orders")
         .select(`
@@ -125,6 +128,8 @@ const Dashboard = () => {
       
       switch (activeTab) {
         case "available":
+          // Debug logging
+          console.log("Querying available orders: status=ready, runner_id=null");
           query = query
             .eq("status", "ready")
             .is("runner_id", null);
@@ -145,7 +150,31 @@ const Dashboard = () => {
       
       const { data, error: fetchError } = await query.order("created_at", { ascending: false });
       
-      if (fetchError) throw fetchError;
+      if (fetchError) {
+        console.error("Query error:", fetchError);
+        throw fetchError;
+      }
+      
+      console.log("Orders fetched:", data);
+      console.log("Number of orders:", data?.length || 0);
+      
+      // Debugging any data issues
+      if (data && data.length > 0) {
+        console.log("Sample order data:", data[0]);
+      } else {
+        console.log("No orders found for the current query");
+        
+        // Check if there are any orders at all in the table
+        const { count, error: countError } = await supabase
+          .from("orders")
+          .select("*", { count: "exact", head: true });
+        
+        if (countError) {
+          console.error("Error counting orders:", countError);
+        } else {
+          console.log("Total orders in database:", count);
+        }
+      }
       
       // Type assertion to match the Order interface
       setOrders(data as Order[]);
@@ -445,6 +474,9 @@ const Dashboard = () => {
               <p className="text-muted-foreground">
                 Manage your deliveries, track orders and earnings
               </p>
+              {currentUser && (
+                <p className="text-sm mt-2">Logged in as: {currentUser.email}</p>
+              )}
             </div>
             
             <div className="mt-4 md:mt-0 flex items-center gap-3">
@@ -531,8 +563,15 @@ const Dashboard = () => {
               <div className="text-center py-12 bg-white rounded-lg border">
                 <p className="text-muted-foreground">No available orders at the moment</p>
                 <p className="text-sm text-muted-foreground mt-2">
-                  Check back soon for new delivery opportunities
+                  This could be because there are no orders with status "ready" and null runner_id
                 </p>
+                <Button 
+                  className="mt-4" 
+                  variant="outline" 
+                  onClick={() => fetchOrders()}
+                >
+                  Refresh Orders
+                </Button>
               </div>
             ) : (
               <div>
