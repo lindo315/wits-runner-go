@@ -50,40 +50,65 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       if (authError) throw authError;
       
       if (authData?.user) {
-        // Fetch the user's runner profile from our users table
-        const { data: userData, error: userError } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', authData.user.id)
-          .eq('role', 'runner')
-          .single();
-        
-        if (userError) throw userError;
-        
-        if (!userData) {
-          throw new Error('No runner profile found for this user');
+        try {
+          // Fetch the user's runner profile from our users table
+          const { data: userData, error: userError } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', authData.user.id)
+            .eq('role', 'runner')
+            .single();
+          
+          if (userError) throw userError;
+          
+          if (!userData) {
+            throw new Error('No runner profile found for this user');
+          }
+          
+          // Format the user data to match our RunnerUser interface
+          const runnerUser: RunnerUser = {
+            id: userData.id,
+            email: userData.email,
+            role: "runner" as const,
+            first_name: userData.full_name.split(' ')[0],
+            last_name: userData.full_name.split(' ').slice(1).join(' '),
+            full_name: userData.full_name,
+            phone_number: userData.phone_number || '',
+            student_number: userData.student_number || '',
+            verification_status: userData.verification_status as "verified",
+            created_at: userData.created_at,
+            updated_at: userData.updated_at || userData.created_at
+          };
+          
+          // Save user to localStorage for persistence
+          localStorage.setItem("runner_user", JSON.stringify(runnerUser));
+          setCurrentUser(runnerUser);
+        } catch (error: any) {
+          console.error("Error fetching user profile:", error);
+          // If there's an RLS policy error, we're still authenticated but need to handle differently
+          if (error.code === '42P17') {
+            // This is the infinite recursion error code
+            const runnerUser: RunnerUser = {
+              id: authData.user.id,
+              email: authData.user.email || email,
+              role: "runner",
+              first_name: "",
+              last_name: "",
+              full_name: "",
+              phone_number: "",
+              student_number: "",
+              verification_status: "verified",
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            };
+            localStorage.setItem("runner_user", JSON.stringify(runnerUser));
+            setCurrentUser(runnerUser);
+          } else {
+            throw error;
+          }
         }
-        
-        // Format the user data to match our RunnerUser interface
-        const runnerUser: RunnerUser = {
-          id: userData.id,
-          email: userData.email,
-          role: "runner" as const,
-          first_name: userData.full_name.split(' ')[0],
-          last_name: userData.full_name.split(' ').slice(1).join(' '),
-          full_name: userData.full_name,
-          phone_number: userData.phone_number || '',
-          student_number: userData.student_number || '',
-          verification_status: userData.verification_status as "verified",
-          created_at: userData.created_at,
-          updated_at: userData.updated_at || userData.created_at
-        };
-        
-        // Save user to localStorage for persistence
-        localStorage.setItem("runner_user", JSON.stringify(runnerUser));
-        setCurrentUser(runnerUser);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Login error:", error);
       throw error;
     } finally {

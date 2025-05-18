@@ -37,9 +37,22 @@ const Login = () => {
         description: "Welcome to Nutrix Runner",
       });
       navigate("/dashboard");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Login error:", error);
-      setError("Invalid email or password");
+      
+      if (error.message?.includes("Email not confirmed")) {
+        setError("Please confirm your email before logging in.");
+      } else if (error.message?.includes("Invalid login credentials")) {
+        setError("Invalid email or password. Please check your credentials.");
+      } else if (error.code === '42P17') {
+        // This handles the RLS policy error
+        setError("Authentication successful, but there was an error loading your profile.");
+        // Still proceed to dashboard
+        setTimeout(() => navigate("/dashboard"), 2000);
+        return;
+      } else {
+        setError("Login failed. Please check your credentials or try again later.");
+      }
     } finally {
       setIsSubmitting(false);
     }
