@@ -11,14 +11,44 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { MapPin, ShoppingBag, Phone, User } from "lucide-react";
+import { format } from "date-fns";
+import { supabase } from "@/integrations/supabase/client";
 
-import {
-  generateMockOrders,
-  generateEarningsData,
-  calculateEarningsSummary,
-  formatOrderDate,
-  Order
-} from "@/services/mockData";
+// Define the types based on the database schema
+interface Order {
+  id: string;
+  order_number: string;
+  status: "ready" | "picked_up" | "in_transit" | "delivered";
+  runner_id: string | null;
+  merchant_id: string;
+  merchant: {
+    name: string;
+    location: string;
+  } | null;
+  customer_addresses: {
+    building_name: string;
+    room_number: string;
+    delivery_instructions: string | null;
+  } | null;
+  order_items: {
+    id: string;
+    quantity: number;
+    menu_item: {
+      name: string;
+    } | null;
+    special_requests: string | null;
+  }[] | null;
+  total_amount: number;
+  created_at: string;
+  delivered_at: string | null;
+}
+
+interface EarningsSummary {
+  today: { count: number; amount: number };
+  weekly: { count: number; amount: number };
+  monthly: { count: number; amount: number };
+  total: { count: number; amount: number };
+}
 
 const Dashboard = () => {
   const { currentUser } = useAuth();
@@ -28,12 +58,14 @@ const Dashboard = () => {
   const [isAvailable, setIsAvailable] = useState(true);
   const [activeTab, setActiveTab] = useState("available");
   const [orders, setOrders] = useState<Order[]>([]);
-  const [earnings, setEarnings] = useState({
+  const [earnings, setEarnings] = useState<EarningsSummary>({
     today: { count: 0, amount: 0 },
     weekly: { count: 0, amount: 0 },
     monthly: { count: 0, amount: 0 },
     total: { count: 0, amount: 0 }
   });
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   
   // Status styling
   const statusLabels = {
@@ -44,55 +76,151 @@ const Dashboard = () => {
   };
   
   const statusColors = {
-    ready: "status-ready",
-    picked_up: "status-picked-up",
-    in_transit: "status-in-transit",
-    delivered: "status-delivered"
+    ready: "bg-amber-100 text-amber-800",
+    picked_up: "bg-blue-100 text-blue-800",
+    in_transit: "bg-purple-100 text-purple-800",
+    delivered: "bg-green-100 text-green-800"
+  };
+  
+  // Helper to format dates
+  const formatOrderDate = (dateString: string) => {
+    return format(new Date(dateString), "MMM d, yyyy 'at' h:mm a");
   };
   
   // Fetch orders based on active tab
-  const fetchOrders = () => {
-    const allOrders = generateMockOrders();
-    let filteredOrders: Order[] = [];
+  const fetchOrders = async () => {
+    if (!currentUser) return;
     
-    switch (activeTab) {
-      case "available":
-        filteredOrders = allOrders.filter(
-          order => order.status === "ready" && !order.runner_id
-        );
-        break;
-      case "active":
-        filteredOrders = allOrders.filter(
-          order => 
-            (order.status === "picked_up" || order.status === "in_transit") &&
-            order.runner_id === currentUser?.id
-        );
-        break;
-      case "completed":
-        filteredOrders = allOrders.filter(
-          order => 
-            order.status === "delivered" && 
-            order.runner_id === currentUser?.id
-        );
-        break;
-      default:
-        filteredOrders = [];
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      let query = supabase
+        .from("orders")
+        .select(`
+          id,
+          order_number,
+          status,
+          runner_id,
+          total_amount,
+          created_at,
+          delivered_at,
+          merchant:merchant_id (
+            name,
+            location
+          ),
+          customer_addresses:delivery_address_id (
+            building_name,
+            room_number,
+            delivery_instructions
+          ),
+          order_items (
+            id,
+            quantity,
+            special_requests,
+            menu_item:menu_item_id (
+              name
+            )
+          )
+        `);
+      
+      switch (activeTab) {
+        case "available":
+          query = query
+            .eq("status", "ready")
+            .is("runner_id", null);
+          break;
+        case "active":
+          query = query
+            .in("status", ["picked_up", "in_transit"])
+            .eq("runner_id", currentUser.id);
+          break;
+        case "completed":
+          query = query
+            .eq("status", "delivered")
+            .eq("runner_id", currentUser.id);
+          break;
+        default:
+          query = query.eq("status", "ready");
+      }
+      
+      const { data, error: fetchError } = await query.order("created_at", { ascending: false });
+      
+      if (fetchError) throw fetchError;
+      
+      setOrders(data || []);
+    } catch (err) {
+      console.error("Error fetching orders:", err);
+      setError("Failed to load orders. Please try again later.");
+    } finally {
+      setIsLoading(false);
     }
-    
-    setOrders(filteredOrders);
   };
   
   // Fetch earnings data
-  const fetchEarnings = () => {
-    if (currentUser) {
-      const earningsData = generateEarningsData(currentUser.id);
-      const summary = calculateEarningsSummary(earningsData);
+  const fetchEarnings = async () => {
+    if (!currentUser) return;
+    
+    try {
+      const { data: earningsData, error: earningsError } = await supabase
+        .from("runner_earnings")
+        .select("*")
+        .eq("runner_id", currentUser.id);
+      
+      if (earningsError) throw earningsError;
+      
+      // Calculate summary
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const weekStart = new Date();
+      weekStart.setDate(weekStart.getDate() - weekStart.getDay()); // Start of week (Sunday)
+      weekStart.setHours(0, 0, 0, 0);
+      
+      const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+      
+      const summary = {
+        today: { count: 0, amount: 0 },
+        weekly: { count: 0, amount: 0 },
+        monthly: { count: 0, amount: 0 },
+        total: { count: earningsData?.length || 0, amount: 0 }
+      };
+      
+      earningsData?.forEach(earning => {
+        // Add to total
+        summary.total.amount += earning.total_earned;
+        
+        // Check if today
+        const earningDate = new Date(earning.created_at);
+        if (earningDate >= today) {
+          summary.today.count++;
+          summary.today.amount += earning.total_earned;
+        }
+        
+        // Check if this week
+        if (earningDate >= weekStart) {
+          summary.weekly.count++;
+          summary.weekly.amount += earning.total_earned;
+        }
+        
+        // Check if this month
+        if (earningDate >= monthStart) {
+          summary.monthly.count++;
+          summary.monthly.amount += earning.total_earned;
+        }
+      });
+      
       setEarnings(summary);
+    } catch (err) {
+      console.error("Error fetching earnings:", err);
+      // Don't set an error message for earnings to avoid cluttering the UI
     }
   };
   
   // Handle order acceptance
-  const handleAcceptOrder = (orderId: string) => {
+  const handleAcceptOrder = async (orderId: string) => {
+    if (!currentUser) return;
+    
     if (!isAvailable) {
       toast({
         title: "You are currently unavailable",
@@ -102,43 +230,160 @@ const Dashboard = () => {
       return;
     }
     
-    // Update order status (in a real app, this would be a database update)
-    const updatedOrders = orders.filter(order => order.id !== orderId);
-    setOrders(updatedOrders);
-    
-    toast({
-      title: "Order accepted",
-      description: "You have successfully accepted this order"
-    });
-    
-    // Switch to active tab
-    setActiveTab("active");
+    try {
+      // Update order status and assign runner
+      const { error: updateError } = await supabase
+        .from("orders")
+        .update({
+          status: "picked_up",
+          runner_id: currentUser.id
+        })
+        .eq("id", orderId);
+      
+      if (updateError) throw updateError;
+      
+      // Add to order status history
+      const { error: historyError } = await supabase
+        .from("order_status_history")
+        .insert({
+          order_id: orderId,
+          status: "picked_up",
+          changed_by: currentUser.id,
+          notes: "Order picked up by runner"
+        });
+      
+      if (historyError) {
+        console.error("Error updating order history:", historyError);
+        // Continue anyway as this is not critical
+      }
+      
+      toast({
+        title: "Order accepted",
+        description: "You have successfully accepted this order"
+      });
+      
+      // Switch to active tab
+      setActiveTab("active");
+    } catch (err) {
+      console.error("Error accepting order:", err);
+      toast({
+        title: "Failed to accept order",
+        description: "Please try again",
+        variant: "destructive"
+      });
+    }
   };
   
   // Order status update handlers
-  const handleMarkPickedUp = (orderId: string) => {
-    toast({
-      title: "Order updated",
-      description: "Order marked as picked up"
-    });
-    fetchOrders();
+  const handleMarkInTransit = async (orderId: string) => {
+    if (!currentUser) return;
+    
+    try {
+      const { error: updateError } = await supabase
+        .from("orders")
+        .update({
+          status: "in_transit"
+        })
+        .eq("id", orderId)
+        .eq("runner_id", currentUser.id);
+      
+      if (updateError) throw updateError;
+      
+      // Add to order status history
+      const { error: historyError } = await supabase
+        .from("order_status_history")
+        .insert({
+          order_id: orderId,
+          status: "in_transit",
+          changed_by: currentUser.id,
+          notes: "Order in transit to delivery location"
+        });
+      
+      if (historyError) {
+        console.error("Error updating order history:", historyError);
+      }
+      
+      toast({
+        title: "Order updated",
+        description: "Order marked as in transit"
+      });
+      
+      fetchOrders();
+    } catch (err) {
+      console.error("Error updating order:", err);
+      toast({
+        title: "Update failed",
+        description: "Could not update order status",
+        variant: "destructive"
+      });
+    }
   };
   
-  const handleMarkInTransit = (orderId: string) => {
-    toast({
-      title: "Order updated",
-      description: "Order marked as in transit"
-    });
-    fetchOrders();
-  };
-  
-  const handleMarkDelivered = (orderId: string) => {
-    toast({
-      title: "Order delivered",
-      description: "Order has been successfully delivered"
-    });
-    fetchOrders();
-    fetchEarnings();
+  const handleMarkDelivered = async (orderId: string) => {
+    if (!currentUser) return;
+    
+    try {
+      const now = new Date().toISOString();
+      
+      const { error: updateError } = await supabase
+        .from("orders")
+        .update({
+          status: "delivered",
+          delivered_at: now
+        })
+        .eq("id", orderId)
+        .eq("runner_id", currentUser.id);
+      
+      if (updateError) throw updateError;
+      
+      // Add to order status history
+      const { error: historyError } = await supabase
+        .from("order_status_history")
+        .insert({
+          order_id: orderId,
+          status: "delivered",
+          changed_by: currentUser.id,
+          notes: "Order successfully delivered"
+        });
+      
+      if (historyError) {
+        console.error("Error updating order history:", historyError);
+      }
+      
+      // Create an earning record
+      const { data: orderData } = await supabase
+        .from("orders")
+        .select("total_amount")
+        .eq("id", orderId)
+        .single();
+      
+      if (orderData) {
+        const baseFee = 15.00; // Example base fee, adjust based on your logic
+        
+        await supabase.from("runner_earnings").insert({
+          runner_id: currentUser.id,
+          order_id: orderId,
+          base_fee: baseFee,
+          total_earned: baseFee,
+          payout_status: "pending"
+        });
+      }
+      
+      toast({
+        title: "Order delivered",
+        description: "Order has been successfully delivered"
+      });
+      
+      fetchOrders();
+      fetchEarnings();
+    } catch (err) {
+      console.error("Error marking order as delivered:", err);
+      toast({
+        title: "Update failed",
+        description: "Could not mark order as delivered",
+        variant: "destructive"
+      });
+    }
   };
   
   // Handle runner availability toggle
@@ -152,17 +397,42 @@ const Dashboard = () => {
     });
   };
   
+  // Set up real-time subscriptions
+  useEffect(() => {
+    if (!currentUser) return;
+    
+    // Subscribe to orders changes
+    const ordersChannel = supabase
+      .channel('orders-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'orders'
+        },
+        (payload) => {
+          console.log('Real-time update received:', payload);
+          // Refresh orders when relevant changes are detected
+          fetchOrders();
+        }
+      )
+      .subscribe();
+    
+    return () => {
+      supabase.removeChannel(ordersChannel);
+    };
+  }, [currentUser, activeTab]);
+  
   // Effect to fetch data when tab changes
   useEffect(() => {
     fetchOrders();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab]);
+  }, [activeTab, currentUser]);
   
   // Effect to fetch earnings data on mount
   useEffect(() => {
     fetchEarnings();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [currentUser]);
   
   return (
     <div className="min-h-screen bg-gray-50">
@@ -201,9 +471,13 @@ const Dashboard = () => {
                 <div>
                   <p className="text-sm font-medium">Active Orders</p>
                   <p className="text-2xl font-bold">
-                    {orders.filter(order => 
-                      order.status === "picked_up" || order.status === "in_transit"
-                    ).length}
+                    {
+                      activeTab === "active" 
+                        ? orders.length 
+                        : orders.filter(order => 
+                            order.status === "picked_up" || order.status === "in_transit"
+                          ).length
+                    }
                   </p>
                 </div>
               </CardContent>
@@ -241,7 +515,19 @@ const Dashboard = () => {
           <TabsContent value="available">
             <h2 className="text-xl font-semibold mb-4">Available Orders</h2>
             
-            {orders.length === 0 ? (
+            {isLoading && (
+              <div className="text-center py-12 bg-white rounded-lg border">
+                <p>Loading orders...</p>
+              </div>
+            )}
+            
+            {error && (
+              <div className="text-center py-12 bg-white rounded-lg border">
+                <p className="text-red-500">{error}</p>
+              </div>
+            )}
+            
+            {!isLoading && !error && orders.length === 0 ? (
               <div className="text-center py-12 bg-white rounded-lg border">
                 <p className="text-muted-foreground">No available orders at the moment</p>
                 <p className="text-sm text-muted-foreground mt-2">
@@ -280,7 +566,7 @@ const Dashboard = () => {
                               </div>
                             </div>
                           </div>
-                          {order.order_items && (
+                          {order.order_items && order.order_items.length > 0 && (
                             <div>
                               <p className="text-sm font-medium mb-1">Order items:</p>
                               <ul className="text-sm list-disc pl-5">
@@ -309,7 +595,19 @@ const Dashboard = () => {
           <TabsContent value="active">
             <h2 className="text-xl font-semibold mb-4">Active Orders</h2>
             
-            {orders.length === 0 ? (
+            {isLoading && (
+              <div className="text-center py-12 bg-white rounded-lg border">
+                <p>Loading orders...</p>
+              </div>
+            )}
+            
+            {error && (
+              <div className="text-center py-12 bg-white rounded-lg border">
+                <p className="text-red-500">{error}</p>
+              </div>
+            )}
+            
+            {!isLoading && !error && orders.length === 0 ? (
               <div className="text-center py-12 bg-white rounded-lg border">
                 <p className="text-muted-foreground">No active orders</p>
                 <p className="text-sm text-muted-foreground mt-2">
@@ -390,7 +688,19 @@ const Dashboard = () => {
           <TabsContent value="completed">
             <h2 className="text-xl font-semibold mb-4">Completed Orders</h2>
             
-            {orders.length === 0 ? (
+            {isLoading && (
+              <div className="text-center py-12 bg-white rounded-lg border">
+                <p>Loading orders...</p>
+              </div>
+            )}
+            
+            {error && (
+              <div className="text-center py-12 bg-white rounded-lg border">
+                <p className="text-red-500">{error}</p>
+              </div>
+            )}
+            
+            {!isLoading && !error && orders.length === 0 ? (
               <div className="text-center py-12 bg-white rounded-lg border">
                 <p className="text-muted-foreground">No completed orders yet</p>
                 <p className="text-sm text-muted-foreground mt-2">

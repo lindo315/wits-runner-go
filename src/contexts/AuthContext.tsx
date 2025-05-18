@@ -1,5 +1,6 @@
 
 import React, { createContext, useState, useContext, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 // Types for our runner user
 export interface RunnerUser {
@@ -35,48 +36,142 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [currentUser, setCurrentUser] = useState<RunnerUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Mock login function - in a real app, this would connect to Supabase
+  // Real login function using Supabase
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     
-    // Simulating an API call delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // This is a mock user - in a real app, you would validate credentials with Supabase
-    const mockUser: RunnerUser = {
-      id: "1",
-      email,
-      role: "runner",
-      first_name: "John",
-      last_name: "Doe",
-      full_name: "John Doe",
-      phone_number: "0123456789",
-      student_number: "1234567",
-      verification_status: "verified",
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
-    
-    // Save user to localStorage for persistence
-    localStorage.setItem("runner_user", JSON.stringify(mockUser));
-    setCurrentUser(mockUser);
-    setIsLoading(false);
+    try {
+      // Sign in with Supabase
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      
+      if (authError) throw authError;
+      
+      if (authData?.user) {
+        // Fetch the user's runner profile from our users table
+        const { data: userData, error: userError } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', authData.user.id)
+          .eq('role', 'runner')
+          .single();
+        
+        if (userError) throw userError;
+        
+        if (!userData) {
+          throw new Error('No runner profile found for this user');
+        }
+        
+        // Format the user data to match our RunnerUser interface
+        const runnerUser: RunnerUser = {
+          id: userData.id,
+          email: userData.email,
+          role: "runner" as const,
+          first_name: userData.full_name.split(' ')[0],
+          last_name: userData.full_name.split(' ').slice(1).join(' '),
+          full_name: userData.full_name,
+          phone_number: userData.phone_number || '',
+          student_number: userData.student_number || '',
+          verification_status: userData.verification_status as "verified",
+          created_at: userData.created_at,
+          updated_at: userData.updated_at || userData.created_at
+        };
+        
+        // Save user to localStorage for persistence
+        localStorage.setItem("runner_user", JSON.stringify(runnerUser));
+        setCurrentUser(runnerUser);
+      }
+    } catch (error) {
+      console.error("Login error:", error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
   };
   
   // Logout function
   const logout = async () => {
-    localStorage.removeItem("runner_user");
-    setCurrentUser(null);
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      
+      localStorage.removeItem("runner_user");
+      setCurrentUser(null);
+    } catch (error) {
+      console.error("Logout error:", error);
+      throw error;
+    }
     return Promise.resolve();
   };
   
-  // Check for saved user on mount
+  // Check for saved user on mount and session from Supabase
   useEffect(() => {
     const savedUser = localStorage.getItem("runner_user");
-    if (savedUser) {
-      setCurrentUser(JSON.parse(savedUser));
-    }
-    setIsLoading(false);
+    
+    // Check Supabase session
+    const checkSession = async () => {
+      setIsLoading(true);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (session?.user) {
+          if (savedUser) {
+            setCurrentUser(JSON.parse(savedUser));
+          } else {
+            // Fetch user data if we have a session but no saved user
+            const { data: userData, error: userError } = await supabase
+              .from('users')
+              .select('*')
+              .eq('id', session.user.id)
+              .eq('role', 'runner')
+              .single();
+            
+            if (!userError && userData) {
+              const runnerUser: RunnerUser = {
+                id: userData.id,
+                email: userData.email,
+                role: "runner" as const,
+                first_name: userData.full_name.split(' ')[0],
+                last_name: userData.full_name.split(' ').slice(1).join(' '),
+                full_name: userData.full_name,
+                phone_number: userData.phone_number || '',
+                student_number: userData.student_number || '',
+                verification_status: userData.verification_status as "verified",
+                created_at: userData.created_at,
+                updated_at: userData.updated_at || userData.created_at
+              };
+              
+              localStorage.setItem("runner_user", JSON.stringify(runnerUser));
+              setCurrentUser(runnerUser);
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Session check error:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    checkSession();
+    
+    // Subscribe to auth changes
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (event === 'SIGNED_OUT') {
+          localStorage.removeItem("runner_user");
+          setCurrentUser(null);
+        }
+      }
+    );
+    
+    return () => {
+      if (authListener && authListener.subscription) {
+        authListener.subscription.unsubscribe();
+      }
+    };
   }, []);
   
   // Create context value
