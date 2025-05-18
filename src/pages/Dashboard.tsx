@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -343,7 +342,15 @@ const Dashboard = () => {
         .eq("id", orderId)
         .eq("runner_id", currentUser.id);
       
-      if (updateError) throw updateError;
+      if (updateError) {
+        console.error("Error updating order status:", updateError);
+        toast({
+          title: "Update failed",
+          description: `Could not update order status: ${updateError.message}`,
+          variant: "destructive"
+        });
+        throw updateError;
+      }
       
       // Add to order status history
       const { error: historyError } = await supabase
@@ -369,7 +376,7 @@ const Dashboard = () => {
       console.error("Error updating order:", err);
       toast({
         title: "Update failed",
-        description: "Could not update order status",
+        description: "Could not update order status. Please try again.",
         variant: "destructive"
       });
     }

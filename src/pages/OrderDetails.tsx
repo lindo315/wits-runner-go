@@ -3,12 +3,13 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { generateMockOrders, formatOrderDate, Order, Customer } from "@/services/mockData";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ChevronLeft, ShoppingBag, MapPin, User, Phone } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { format } from "date-fns";
 
 const OrderDetails = () => {
   const { id } = useParams<{ id: string }>();
@@ -16,12 +17,14 @@ const OrderDetails = () => {
   const { toast } = useToast();
   const { currentUser } = useAuth();
   
-  const [order, setOrder] = useState<Order | null>(null);
-  const [customer, setCustomer] = useState<Customer | null>(null);
+  const [order, setOrder] = useState<any | null>(null);
+  const [customerInfo, setCustomerInfo] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   
   // Status styling
   const statusLabels = {
+    pending: "Pending",
     ready: "Ready",
     picked_up: "Picked Up",
     in_transit: "In Transit",
@@ -29,42 +32,259 @@ const OrderDetails = () => {
   };
   
   const statusColors = {
-    ready: "status-ready",
-    picked_up: "status-picked-up",
-    in_transit: "status-in-transit",
-    delivered: "status-delivered"
+    pending: "bg-yellow-100 text-yellow-800",
+    ready: "bg-amber-100 text-amber-800",
+    picked_up: "bg-blue-100 text-blue-800",
+    in_transit: "bg-purple-100 text-purple-800",
+    delivered: "bg-green-100 text-green-800"
+  };
+
+  // Format dates helper function
+  const formatOrderDate = (dateString: string) => {
+    return format(new Date(dateString), "MMM d, yyyy 'at' h:mm a");
   };
   
   // Fetch order data
   useEffect(() => {
-    const fetchOrder = () => {
-      setLoading(true);
+    const fetchOrderDetails = async () => {
+      if (!id) return;
       
-      // Find order in mock data
-      const allOrders = generateMockOrders();
-      const foundOrder = allOrders.find(order => order.id === id);
-      
-      if (foundOrder) {
-        setOrder(foundOrder);
+      try {
+        setLoading(true);
+        setError(null);
         
-        // Mock customer data
-        setCustomer({
-          id: foundOrder.customer_id,
-          full_name: "Jane Student",
-          phone_number: "0711234567"
-        });
+        console.log("Fetching order details for ID:", id);
+        
+        // Fetch the order with all related data
+        const { data: orderData, error: orderError } = await supabase
+          .from("orders")
+          .select(`
+            *,
+            merchant:merchant_id (*),
+            customer_addresses:delivery_address_id (*),
+            order_items (
+              *,
+              menu_item:menu_item_id (*)
+            )
+          `)
+          .eq("id", id)
+          .single();
+        
+        if (orderError) {
+          console.error("Error fetching order:", orderError);
+          setError(`Failed to load order: ${orderError.message}`);
+          return;
+        }
+        
+        console.log("Order data received:", orderData);
+        
+        if (orderData) {
+          setOrder(orderData);
+          
+          // Fetch customer information if available
+          if (orderData.customer_id) {
+            const { data: userData, error: userError } = await supabase
+              .from("users")
+              .select("*")
+              .eq("id", orderData.customer_id)
+              .single();
+            
+            if (!userError && userData) {
+              setCustomerInfo(userData);
+            } else {
+              console.log("Could not fetch customer data or no customer found");
+            }
+          }
+        } else {
+          setError("Order not found");
+        }
+      } catch (err: any) {
+        console.error("Error in fetchOrderDetails:", err);
+        setError(`An unexpected error occurred: ${err.message}`);
+      } finally {
+        setLoading(false);
       }
-      
-      setLoading(false);
     };
     
-    fetchOrder();
+    fetchOrderDetails();
   }, [id]);
+
+  // Order action handlers
+  const handleAcceptOrder = async () => {
+    if (!currentUser || !order) return;
+    
+    try {
+      // Update order status and assign runner
+      const { error: updateError } = await supabase
+        .from("orders")
+        .update({
+          status: "picked_up",
+          runner_id: currentUser.id
+        })
+        .eq("id", order.id);
+      
+      if (updateError) throw updateError;
+      
+      // Add to order status history
+      const { error: historyError } = await supabase
+        .from("order_status_history")
+        .insert({
+          order_id: order.id,
+          status: "picked_up",
+          changed_by: currentUser.id,
+          notes: "Order picked up by runner"
+        });
+      
+      if (historyError) {
+        console.error("Error updating order history:", historyError);
+      }
+      
+      toast({
+        title: "Order accepted",
+        description: "You have successfully accepted this order"
+      });
+      
+      navigate("/dashboard");
+    } catch (err: any) {
+      console.error("Error accepting order:", err);
+      toast({
+        title: "Failed to accept order",
+        description: "Please try again",
+        variant: "destructive"
+      });
+    }
+  };
+  
+  const handleMarkInTransit = async () => {
+    if (!currentUser || !order) return;
+    
+    try {
+      const { error: updateError } = await supabase
+        .from("orders")
+        .update({
+          status: "in_transit"
+        })
+        .eq("id", order.id)
+        .eq("runner_id", currentUser.id);
+      
+      if (updateError) throw updateError;
+      
+      // Add to order status history
+      const { error: historyError } = await supabase
+        .from("order_status_history")
+        .insert({
+          order_id: order.id,
+          status: "in_transit",
+          changed_by: currentUser.id,
+          notes: "Order in transit to delivery location"
+        });
+      
+      if (historyError) {
+        console.error("Error updating order history:", historyError);
+      }
+      
+      // Update order in state
+      setOrder({
+        ...order,
+        status: "in_transit"
+      });
+      
+      toast({
+        title: "Order updated",
+        description: "Order marked as in transit"
+      });
+    } catch (err: any) {
+      console.error("Error updating order:", err);
+      toast({
+        title: "Update failed",
+        description: "Could not update order status",
+        variant: "destructive"
+      });
+    }
+  };
+  
+  const handleMarkDelivered = async () => {
+    if (!currentUser || !order) return;
+    
+    try {
+      const now = new Date().toISOString();
+      
+      const { error: updateError } = await supabase
+        .from("orders")
+        .update({
+          status: "delivered",
+          delivered_at: now
+        })
+        .eq("id", order.id)
+        .eq("runner_id", currentUser.id);
+      
+      if (updateError) throw updateError;
+      
+      // Add to order status history
+      const { error: historyError } = await supabase
+        .from("order_status_history")
+        .insert({
+          order_id: order.id,
+          status: "delivered",
+          changed_by: currentUser.id,
+          notes: "Order successfully delivered"
+        });
+      
+      if (historyError) {
+        console.error("Error updating order history:", historyError);
+      }
+      
+      // Create an earning record
+      const baseFee = 15.00; // Example base fee
+      
+      await supabase.from("runner_earnings").insert({
+        runner_id: currentUser.id,
+        order_id: order.id,
+        base_fee: baseFee,
+        total_earned: baseFee,
+        payout_status: "pending"
+      });
+      
+      // Update order in state
+      setOrder({
+        ...order,
+        status: "delivered",
+        delivered_at: now
+      });
+      
+      toast({
+        title: "Order delivered",
+        description: "Order has been successfully delivered"
+      });
+    } catch (err: any) {
+      console.error("Error marking order as delivered:", err);
+      toast({
+        title: "Update failed",
+        description: "Could not mark order as delivered",
+        variant: "destructive"
+      });
+    }
+  };
   
   if (loading) {
     return (
       <div className="container py-8">
         <p>Loading order details...</p>
+      </div>
+    );
+  }
+  
+  if (error) {
+    return (
+      <div className="container py-8">
+        <p className="text-red-500">{error}</p>
+        <Button 
+          variant="outline" 
+          className="mt-4"
+          onClick={() => navigate("/dashboard")}
+        >
+          Back to Dashboard
+        </Button>
       </div>
     );
   }
@@ -84,37 +304,6 @@ const OrderDetails = () => {
     );
   }
   
-  // Order action handlers
-  const handleAcceptOrder = () => {
-    toast({
-      title: "Order accepted",
-      description: "You are now assigned to this delivery"
-    });
-    navigate("/dashboard");
-  };
-  
-  const handleMarkPickedUp = () => {
-    toast({
-      title: "Order updated",
-      description: "Order marked as picked up"
-    });
-  };
-  
-  const handleMarkInTransit = () => {
-    toast({
-      title: "Order updated",
-      description: "Order marked as in transit"
-    });
-  };
-  
-  const handleMarkDelivered = () => {
-    toast({
-      title: "Order delivered",
-      description: "Order has been successfully delivered"
-    });
-    navigate("/dashboard");
-  };
-  
   return (
     <div className="container py-8 animate-fade-in">
       <Button
@@ -132,8 +321,8 @@ const OrderDetails = () => {
             <div>
               <div className="flex items-center gap-2 mb-2">
                 <h1 className="text-2xl font-bold">Order #{order.order_number}</h1>
-                <Badge className={statusColors[order.status]}>
-                  {statusLabels[order.status]}
+                <Badge className={statusColors[order.status as keyof typeof statusColors]}>
+                  {statusLabels[order.status as keyof typeof statusLabels]}
                 </Badge>
               </div>
               <p className="text-muted-foreground">
@@ -207,16 +396,16 @@ const OrderDetails = () => {
                 </div>
               </div>
               
-              {customer && (
+              {customerInfo && (
                 <div className="flex items-start space-x-3">
                   <User className="h-5 w-5 mt-1 flex-shrink-0" />
                   <div className="space-y-1">
-                    <p className="font-medium">{customer.full_name}</p>
-                    {customer.phone_number && (
+                    <p className="font-medium">{customerInfo.full_name}</p>
+                    {customerInfo.phone_number && (
                       <Button 
                         variant="outline" 
                         size="sm"
-                        onClick={() => window.open(`tel:${customer.phone_number}`, '_blank')}
+                        onClick={() => window.open(`tel:${customerInfo.phone_number}`, '_blank')}
                       >
                         <Phone className="h-3 w-3 mr-1" />
                         Call Customer
@@ -233,7 +422,7 @@ const OrderDetails = () => {
             <h2 className="text-lg font-semibold mb-2">Order Items</h2>
             <div className="bg-muted/50 rounded-md p-4">
               <div className="space-y-3">
-                {order.order_items && order.order_items.map((item, index) => (
+                {order.order_items && order.order_items.map((item: any, index: number) => (
                   <div key={index} className="flex justify-between items-start">
                     <div>
                       <p className="font-medium">
@@ -245,7 +434,7 @@ const OrderDetails = () => {
                         </p>
                       )}
                     </div>
-                    <p className="font-medium">R{(item.total_price ?? 0).toFixed(2)}</p>
+                    <p className="font-medium">R{(item.total_price || 0).toFixed(2)}</p>
                   </div>
                 ))}
               </div>
@@ -255,15 +444,15 @@ const OrderDetails = () => {
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span>Subtotal</span>
-                  <span>R{(order.subtotal ?? 0).toFixed(2)}</span>
+                  <span>R{(order.subtotal || 0).toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span>Delivery Fee</span>
-                  <span>R{(order.delivery_fee ?? 0).toFixed(2)}</span>
+                  <span>R{(order.delivery_fee || 0).toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between font-medium pt-2">
                   <span>Total</span>
-                  <span>R{(order.total_amount ?? 0).toFixed(2)}</span>
+                  <span>R{(order.total_amount || 0).toFixed(2)}</span>
                 </div>
               </div>
             </div>
@@ -282,7 +471,7 @@ const OrderDetails = () => {
               
               {order.payment_method === "cash" && (
                 <div className="mt-2 p-3 bg-yellow-50 border border-yellow-100 rounded-md text-sm text-yellow-800">
-                  Remember to collect R{(order.total_amount ?? 0).toFixed(2)} in cash from the customer.
+                  Remember to collect R{(order.total_amount || 0).toFixed(2)} in cash from the customer.
                 </div>
               )}
             </div>
