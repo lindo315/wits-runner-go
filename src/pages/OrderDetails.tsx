@@ -21,6 +21,7 @@ const OrderDetails = () => {
   const [customerInfo, setCustomerInfo] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isUpdating, setIsUpdating] = useState(false);
   
   // Status styling
   const statusLabels = {
@@ -90,9 +91,10 @@ const OrderDetails = () => {
               .single();
             
             if (!userError && userData) {
+              console.log("Customer data received:", userData);
               setCustomerInfo(userData);
             } else {
-              console.log("Could not fetch customer data or no customer found");
+              console.log("Could not fetch customer data or no customer found:", userError);
             }
           }
         } else {
@@ -114,6 +116,8 @@ const OrderDetails = () => {
     if (!currentUser || !order) return;
     
     try {
+      setIsUpdating(true);
+      
       // Update order status and assign runner
       const { error: updateError } = await supabase
         .from("orders")
@@ -139,12 +143,17 @@ const OrderDetails = () => {
         console.error("Error updating order history:", historyError);
       }
       
+      // Update local state
+      setOrder({
+        ...order,
+        status: "picked_up",
+        runner_id: currentUser.id
+      });
+      
       toast({
         title: "Order accepted",
         description: "You have successfully accepted this order"
       });
-      
-      navigate("/dashboard");
     } catch (err: any) {
       console.error("Error accepting order:", err);
       toast({
@@ -152,6 +161,8 @@ const OrderDetails = () => {
         description: "Please try again",
         variant: "destructive"
       });
+    } finally {
+      setIsUpdating(false);
     }
   };
   
@@ -159,15 +170,28 @@ const OrderDetails = () => {
     if (!currentUser || !order) return;
     
     try {
-      const { error: updateError } = await supabase
-        .from("orders")
-        .update({
-          status: "in_transit"
-        })
-        .eq("id", order.id)
-        .eq("runner_id", currentUser.id);
+      setIsUpdating(true);
+      console.log("Marking order as in transit...");
+      console.log("Order ID:", order.id);
+      console.log("Current user ID:", currentUser.id);
       
-      if (updateError) throw updateError;
+      const { data, error: updateError } = await supabase
+        .from("orders")
+        .update({ status: "in_transit" })
+        .eq("id", order.id)
+        .select();
+      
+      if (updateError) {
+        console.error("Error updating order status:", updateError);
+        toast({
+          title: "Update failed",
+          description: `Could not update order status: ${updateError.message}`,
+          variant: "destructive"
+        });
+        throw updateError;
+      }
+      
+      console.log("Update response:", data);
       
       // Add to order status history
       const { error: historyError } = await supabase
@@ -197,9 +221,11 @@ const OrderDetails = () => {
       console.error("Error updating order:", err);
       toast({
         title: "Update failed",
-        description: "Could not update order status",
+        description: "Could not update order status. Please try again.",
         variant: "destructive"
       });
+    } finally {
+      setIsUpdating(false);
     }
   };
   
@@ -207,6 +233,7 @@ const OrderDetails = () => {
     if (!currentUser || !order) return;
     
     try {
+      setIsUpdating(true);
       const now = new Date().toISOString();
       
       const { error: updateError } = await supabase
@@ -215,8 +242,7 @@ const OrderDetails = () => {
           status: "delivered",
           delivered_at: now
         })
-        .eq("id", order.id)
-        .eq("runner_id", currentUser.id);
+        .eq("id", order.id);
       
       if (updateError) throw updateError;
       
@@ -263,6 +289,8 @@ const OrderDetails = () => {
         description: "Could not mark order as delivered",
         variant: "destructive"
       });
+    } finally {
+      setIsUpdating(false);
     }
   };
   
@@ -332,22 +360,22 @@ const OrderDetails = () => {
             
             <div className="mt-4 md:mt-0">
               {!order.runner_id && order.status === "ready" && (
-                <Button onClick={handleAcceptOrder}>
-                  Accept Order
+                <Button onClick={handleAcceptOrder} disabled={isUpdating}>
+                  {isUpdating ? "Processing..." : "Accept Order"}
                 </Button>
               )}
               
               {order.runner_id && order.runner_id === currentUser?.id && (
                 <>
                   {order.status === "picked_up" && (
-                    <Button onClick={handleMarkInTransit}>
-                      Mark In Transit
+                    <Button onClick={handleMarkInTransit} disabled={isUpdating}>
+                      {isUpdating ? "Processing..." : "Mark In Transit"}
                     </Button>
                   )}
                   
                   {order.status === "in_transit" && (
-                    <Button onClick={handleMarkDelivered}>
-                      Mark Delivered
+                    <Button onClick={handleMarkDelivered} disabled={isUpdating}>
+                      {isUpdating ? "Processing..." : "Mark Delivered"}
                     </Button>
                   )}
                 </>
@@ -357,6 +385,31 @@ const OrderDetails = () => {
         </CardHeader>
         
         <CardContent className="pt-6">
+          {/* Customer Information */}
+          {customerInfo && (
+            <div className="mb-6">
+              <h2 className="text-lg font-semibold mb-2">Customer Information</h2>
+              <div className="bg-muted/50 rounded-md p-4">
+                <div className="flex items-start space-x-3">
+                  <User className="h-5 w-5 mt-1 flex-shrink-0" />
+                  <div className="space-y-1">
+                    <p className="font-medium">{customerInfo.full_name}</p>
+                    <p className="text-sm">{customerInfo.email}</p>
+                    {customerInfo.phone_number && (
+                      <p className="text-sm flex items-center">
+                        <Phone className="h-3 w-3 mr-1" />
+                        {customerInfo.phone_number}
+                      </p>
+                    )}
+                    {customerInfo.student_number && (
+                      <p className="text-sm">Student #: {customerInfo.student_number}</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          
           {/* Pickup Information */}
           <div className="mb-6">
             <h2 className="text-lg font-semibold mb-2">Pickup Information</h2>
