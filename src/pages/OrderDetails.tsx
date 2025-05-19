@@ -385,30 +385,34 @@ const OrderDetails = () => {
         </CardHeader>
         
         <CardContent className="pt-6">
-          {/* Customer Information */}
-          {customerInfo && (
-            <div className="mb-6">
-              <h2 className="text-lg font-semibold mb-2">Customer Information</h2>
-              <div className="bg-muted/50 rounded-md p-4">
-                <div className="flex items-start space-x-3">
-                  <User className="h-5 w-5 mt-1 flex-shrink-0" />
-                  <div className="space-y-1">
-                    <p className="font-medium">{customerInfo.full_name}</p>
-                    <p className="text-sm">{customerInfo.email}</p>
-                    {customerInfo.phone_number && (
-                      <p className="text-sm flex items-center">
-                        <Phone className="h-3 w-3 mr-1" />
-                        {customerInfo.phone_number}
-                      </p>
-                    )}
-                    {customerInfo.student_number && (
-                      <p className="text-sm">Student #: {customerInfo.student_number}</p>
-                    )}
-                  </div>
+          {/* Customer Information - More prominently displayed */}
+          <div className="mb-6">
+            <h2 className="text-lg font-semibold mb-2">Customer Information</h2>
+            <div className="bg-muted/50 rounded-md p-4">
+              <div className="flex items-start space-x-3">
+                <User className="h-5 w-5 mt-1 flex-shrink-0" />
+                <div className="space-y-1">
+                  {customerInfo ? (
+                    <>
+                      <p className="font-medium text-lg">{customerInfo.full_name}</p>
+                      <p className="text-sm">{customerInfo.email}</p>
+                      {customerInfo.phone_number && (
+                        <p className="text-sm flex items-center">
+                          <Phone className="h-3 w-3 mr-1" />
+                          {customerInfo.phone_number}
+                        </p>
+                      )}
+                      {customerInfo.student_number && (
+                        <p className="text-sm">Student #: {customerInfo.student_number}</p>
+                      )}
+                    </>
+                  ) : (
+                    <p className="text-muted-foreground">Customer information not available</p>
+                  )}
                 </div>
               </div>
             </div>
-          )}
+          </div>
           
           {/* Pickup Information */}
           <div className="mb-6">
