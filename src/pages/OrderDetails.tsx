@@ -84,18 +84,24 @@ const OrderDetails = () => {
           
           // Fetch customer information if available
           if (orderData.customer_id) {
+            console.log("Fetching customer data for ID:", orderData.customer_id);
+            
             const { data: userData, error: userError } = await supabase
               .from("users")
               .select("*")
               .eq("id", orderData.customer_id)
               .single();
             
-            if (!userError && userData) {
+            if (userError) {
+              console.error("Error fetching customer data:", userError);
+            } else if (userData) {
               console.log("Customer data received:", userData);
               setCustomerInfo(userData);
             } else {
-              console.log("Could not fetch customer data or no customer found:", userError);
+              console.log("No customer found with ID:", orderData.customer_id);
             }
+          } else {
+            console.log("No customer ID found in order data");
           }
         } else {
           setError("Order not found");
@@ -174,6 +180,7 @@ const OrderDetails = () => {
       console.log("Marking order as in transit...");
       console.log("Order ID:", order.id);
       console.log("Current user ID:", currentUser.id);
+      console.log("Current order status:", order.status);
       
       const { data, error: updateError } = await supabase
         .from("orders")
@@ -407,7 +414,9 @@ const OrderDetails = () => {
                       )}
                     </>
                   ) : (
-                    <p className="text-muted-foreground">Customer information not available</p>
+                    <p className="text-muted-foreground">
+                      {order.customer_id ? "Loading customer information..." : "No customer information available"}
+                    </p>
                   )}
                 </div>
               </div>
