@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { ChevronLeft, ShoppingBag, MapPin, User, Phone } from "lucide-react";
+import { ChevronLeft, ShoppingBag, MapPin, User, Phone, CreditCard } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 
@@ -38,6 +38,14 @@ const OrderDetails = () => {
     picked_up: "bg-blue-100 text-blue-800",
     in_transit: "bg-purple-100 text-purple-800",
     delivered: "bg-green-100 text-green-800"
+  };
+
+  // Payment status styling
+  const paymentStatusColors = {
+    pending: "bg-yellow-100 text-yellow-800",
+    paid: "bg-green-100 text-green-800",
+    failed: "bg-red-100 text-red-800",
+    refunded: "bg-blue-100 text-blue-800"
   };
 
   // Format dates helper function
@@ -359,6 +367,9 @@ const OrderDetails = () => {
                 <Badge className={statusColors[order.status as keyof typeof statusColors]}>
                   {statusLabels[order.status as keyof typeof statusLabels]}
                 </Badge>
+                <Badge className={paymentStatusColors[order.payment_status as keyof typeof paymentStatusColors] || "bg-gray-100"}>
+                  Payment: {order.payment_status ? order.payment_status.charAt(0).toUpperCase() + order.payment_status.slice(1) : "Unknown"}
+                </Badge>
               </div>
               <p className="text-muted-foreground">
                 Placed on {formatOrderDate(order.created_at)}
@@ -392,6 +403,45 @@ const OrderDetails = () => {
         </CardHeader>
         
         <CardContent className="pt-6">
+          {/* Payment Information - Now more prominently displayed */}
+          <div className="mb-6">
+            <h2 className="text-lg font-semibold mb-2">Payment Information</h2>
+            <div className={`bg-muted/50 rounded-md p-4 ${
+              order.payment_status === 'paid' ? 'border-l-4 border-green-500' : 
+              order.payment_status === 'failed' ? 'border-l-4 border-red-500' : 
+              'border-l-4 border-yellow-500'
+            }`}>
+              <div className="flex items-start space-x-3">
+                <CreditCard className="h-5 w-5 mt-1 flex-shrink-0" />
+                <div className="space-y-1">
+                  <p className="font-medium">
+                    <strong>Method:</strong> {order.payment_method === "cash" ? "Cash on Delivery" : "Online Payment"}
+                  </p>
+                  <p className="font-medium">
+                    <strong>Status:</strong> {order.payment_status ? (
+                      <span className={
+                        order.payment_status === 'paid' ? 'text-green-600 font-medium' : 
+                        order.payment_status === 'failed' ? 'text-red-600 font-medium' : 
+                        'text-yellow-600 font-medium'
+                      }>
+                        {order.payment_status.charAt(0).toUpperCase() + order.payment_status.slice(1)}
+                      </span>
+                    ) : "Pending"}
+                  </p>
+                  <p className="font-medium">
+                    <strong>Amount:</strong> R{(order.total_amount || 0).toFixed(2)}
+                  </p>
+                  
+                  {order.payment_method === "cash" && (
+                    <div className="mt-2 p-3 bg-yellow-50 border border-yellow-100 rounded-md text-sm text-yellow-800">
+                      <strong>Important:</strong> Remember to collect R{(order.total_amount || 0).toFixed(2)} in cash from the customer.
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+          
           {/* Customer Information - More prominently displayed */}
           <div className="mb-6">
             <h2 className="text-lg font-semibold mb-2">Customer Information</h2>
@@ -521,25 +571,6 @@ const OrderDetails = () => {
                   <span>R{(order.total_amount || 0).toFixed(2)}</span>
                 </div>
               </div>
-            </div>
-          </div>
-          
-          {/* Payment Information */}
-          <div>
-            <h2 className="text-lg font-semibold mb-2">Payment Information</h2>
-            <div className="bg-muted/50 rounded-md p-4">
-              <p>
-                <strong>Method:</strong> {order.payment_method === "cash" ? "Cash on Delivery" : "Online Payment"}
-              </p>
-              <p>
-                <strong>Status:</strong> {order.payment_status ? (order.payment_status.charAt(0).toUpperCase() + order.payment_status.slice(1)) : "Pending"}
-              </p>
-              
-              {order.payment_method === "cash" && (
-                <div className="mt-2 p-3 bg-yellow-50 border border-yellow-100 rounded-md text-sm text-yellow-800">
-                  Remember to collect R{(order.total_amount || 0).toFixed(2)} in cash from the customer.
-                </div>
-              )}
             </div>
           </div>
         </CardContent>

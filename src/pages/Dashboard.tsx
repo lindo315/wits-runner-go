@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, ShoppingBag, Phone, User, RefreshCcw } from "lucide-react";
+import { MapPin, ShoppingBag, Phone, User, RefreshCcw, CreditCard } from "lucide-react";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -18,6 +18,8 @@ interface Order {
   id: string;
   order_number: string;
   status: "pending" | "ready" | "picked_up" | "in_transit" | "delivered";
+  payment_status: "pending" | "paid" | "failed" | "refunded";
+  payment_method: string;
   runner_id: string | null;
   merchant_id?: string;
   merchant: {
@@ -84,6 +86,14 @@ const Dashboard = () => {
     delivered: "bg-green-100 text-green-800"
   };
   
+  // Payment status styling
+  const paymentStatusColors = {
+    pending: "bg-yellow-100 text-yellow-800",
+    paid: "bg-green-100 text-green-800",
+    failed: "bg-red-100 text-red-800",
+    refunded: "bg-blue-100 text-blue-800"
+  };
+  
   // Helper to format dates
   const formatOrderDate = (dateString: string) => {
     return format(new Date(dateString), "MMM d, yyyy 'at' h:mm a");
@@ -120,6 +130,8 @@ const Dashboard = () => {
           id,
           order_number,
           status,
+          payment_status,
+          payment_method,
           runner_id,
           merchant_id,
           total_amount,
@@ -651,6 +663,9 @@ const Dashboard = () => {
                             <Badge className={statusColors[order.status]}>
                               {statusLabels[order.status]}
                             </Badge>
+                            <Badge className={paymentStatusColors[order.payment_status] || "bg-gray-100"}>
+                              {order.payment_status ? order.payment_status.charAt(0).toUpperCase() + order.payment_status.slice(1) : "Pending"}
+                            </Badge>
                           </div>
                           <p className="text-sm text-muted-foreground mb-4">
                             {formatOrderDate(order.created_at)}
@@ -668,6 +683,21 @@ const Dashboard = () => {
                               <div>
                                 <p className="font-medium">Delivery to:</p>
                                 <p className="text-sm">{order.customer_addresses?.building_name}, Room {order.customer_addresses?.room_number}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-start gap-2">
+                              <CreditCard className="w-4 h-4 mt-1" />
+                              <div>
+                                <p className="text-sm">
+                                  <span className="font-medium">Payment:</span> {order.payment_method === "cash" ? "Cash on Delivery" : "Online Payment"} - 
+                                  <span className={
+                                    order.payment_status === 'paid' ? ' text-green-600 font-medium' : 
+                                    order.payment_status === 'failed' ? ' text-red-600 font-medium' : 
+                                    ' text-yellow-600 font-medium'
+                                  }>
+                                    {' '}{order.payment_status ? order.payment_status.charAt(0).toUpperCase() + order.payment_status.slice(1) : "Pending"}
+                                  </span>
+                                </p>
                               </div>
                             </div>
                           </div>
@@ -731,6 +761,9 @@ const Dashboard = () => {
                             <Badge className={statusColors[order.status]}>
                               {statusLabels[order.status]}
                             </Badge>
+                            <Badge className={paymentStatusColors[order.payment_status] || "bg-gray-100"}>
+                              {order.payment_status ? order.payment_status.charAt(0).toUpperCase() + order.payment_status.slice(1) : "Pending"}
+                            </Badge>
                           </div>
                           <p className="text-sm text-muted-foreground mb-4">
                             {formatOrderDate(order.created_at)}
@@ -753,6 +786,26 @@ const Dashboard = () => {
                                     Note: {order.customer_addresses.delivery_instructions}
                                   </p>
                                 )}
+                              </div>
+                            </div>
+                            <div className="flex items-start gap-2">
+                              <CreditCard className="w-4 h-4 mt-1" />
+                              <div>
+                                <p className="text-sm">
+                                  <span className="font-medium">Payment:</span> {order.payment_method === "cash" ? "Cash on Delivery" : "Online Payment"} - 
+                                  <span className={
+                                    order.payment_status === 'paid' ? ' text-green-600 font-medium' : 
+                                    order.payment_status === 'failed' ? ' text-red-600 font-medium' : 
+                                    ' text-yellow-600 font-medium'
+                                  }>
+                                    {' '}{order.payment_status ? order.payment_status.charAt(0).toUpperCase() + order.payment_status.slice(1) : "Pending"}
+                                  </span>
+                                  {order.payment_method === "cash" && (
+                                    <span className="block text-yellow-600">
+                                      Remember to collect R{order.total_amount?.toFixed(2)} from customer
+                                    </span>
+                                  )}
+                                </p>
                               </div>
                             </div>
                           </div>
@@ -824,6 +877,9 @@ const Dashboard = () => {
                             <Badge className={statusColors.delivered}>
                               {statusLabels.delivered}
                             </Badge>
+                            <Badge className={paymentStatusColors[order.payment_status] || "bg-gray-100"}>
+                              {order.payment_status ? order.payment_status.charAt(0).toUpperCase() + order.payment_status.slice(1) : "Pending"}
+                            </Badge>
                           </div>
                           <p className="text-sm text-muted-foreground mb-1">
                             Delivered: {order.delivered_at && formatOrderDate(order.delivered_at)}
@@ -837,6 +893,19 @@ const Dashboard = () => {
                               <MapPin className="w-4 h-4 mt-1" />
                               <p className="font-medium">{order.customer_addresses?.building_name}</p>
                             </div>
+                            <div className="flex items-start gap-2">
+                              <CreditCard className="w-4 h-4 mt-1" />
+                              <p className="text-sm">
+                                {order.payment_method === "cash" ? "Cash on Delivery" : "Online Payment"} - 
+                                <span className={
+                                  order.payment_status === 'paid' ? ' text-green-600 font-medium' : 
+                                  order.payment_status === 'failed' ? ' text-red-600 font-medium' : 
+                                  ' text-yellow-600 font-medium'
+                                }>
+                                  {' '}{order.payment_status ? order.payment_status.charAt(0).toUpperCase() + order.payment_status.slice(1) : "Pending"}
+                                </span>
+                              </p>
+                            </div>
                           </div>
                         </div>
                         <div className="mt-6 md:mt-0 flex flex-col items-end">
@@ -844,6 +913,14 @@ const Dashboard = () => {
                           <p className="text-sm text-green-600 font-medium">
                             Earned: R15.00
                           </p>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="mt-2"
+                            onClick={() => navigate(`/order-details/${order.id}`)}
+                          >
+                            View Details
+                          </Button>
                         </div>
                       </div>
                     </CardContent>
