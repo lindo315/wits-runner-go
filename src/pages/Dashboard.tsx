@@ -2,14 +2,28 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, ShoppingBag, Phone, User, RefreshCcw, CreditCard } from "lucide-react";
+import { 
+  MapPin, 
+  ShoppingBag, 
+  Phone, 
+  User, 
+  RefreshCcw, 
+  CreditCard, 
+  Calendar, 
+  Clock, 
+  WalletCards, 
+  TrendingUp,
+  ArrowRightCircle,
+  CheckCircle2,
+  AlertCircle
+} from "lucide-react";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -517,419 +531,519 @@ const Dashboard = () => {
     });
   };
   
+  // Calculate counts for each order status
+  const activeOrdersCount = orders.filter(order => 
+    order.status === "picked_up" || order.status === "in_transit").length;
+  
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="container py-6 animate-fade-in">
-        {/* Header & Stats */}
-        <div className="mb-8">
-          <div className="flex flex-col md:flex-row md:items-center justify-between mb-8">
+      <div className="container py-6 space-y-8 animate-fade-in">
+        {/* Header & User Info */}
+        <div className="rounded-lg border bg-white shadow-sm p-6">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-bold">Runner Dashboard</h1>
+              <h1 className="text-2xl font-bold text-blue-600">Runner Dashboard</h1>
               <p className="text-muted-foreground">
                 Manage your deliveries, track orders and earnings
               </p>
               {currentUser && (
-                <p className="text-sm mt-2">Logged in as: {currentUser.email}</p>
+                <div className="flex items-center gap-2 mt-2">
+                  <User className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-medium">{currentUser.email}</span>
+                </div>
               )}
             </div>
             
-            <div className="mt-4 md:mt-0 flex items-center gap-3">
-              <div className="flex items-center space-x-2">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+              <div className="flex items-center space-x-2 bg-gray-50 p-2 rounded-md">
                 <Switch 
                   id="runner-status" 
                   checked={isAvailable} 
                   onCheckedChange={handleStatusChange}
                 />
-                <Label htmlFor="runner-status">
-                  {isAvailable ? "Available" : "Unavailable"}
+                <Label htmlFor="runner-status" className={isAvailable ? "text-green-600 font-medium" : "text-red-600"}>
+                  {isAvailable ? "Available for Orders" : "Unavailable"}
                 </Label>
               </div>
               
-              <Button variant="outline" onClick={() => navigate("/profile")}>
+              <Button 
+                variant="outline" 
+                onClick={() => navigate("/profile")}
+                className="flex items-center gap-2"
+              >
+                <User className="h-4 w-4" />
                 Profile Settings
               </Button>
             </div>
           </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card className="bg-primary/5">
-              <CardContent className="p-4 flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium">Active Orders</p>
-                  <p className="text-2xl font-bold">
-                    {
-                      activeTab === "active" 
-                        ? orders.length 
-                        : orders.filter(order => 
-                            order.status === "picked_up" || order.status === "in_transit"
-                          ).length
-                    }
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card className="bg-primary/5">
-              <CardContent className="p-4 flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium">Today's Earnings</p>
-                  <p className="text-2xl font-bold">R{earnings.today.amount.toFixed(2)}</p>
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card className="bg-primary/5">
-              <CardContent className="p-4 flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium">Total Earnings</p>
-                  <p className="text-2xl font-bold">R{earnings.total.amount.toFixed(2)}</p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
         </div>
         
-        {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <div className="flex justify-between items-center mb-6">
-            <TabsList className="grid grid-cols-3 md:w-[400px]">
-              <TabsTrigger value="available">Available</TabsTrigger>
-              <TabsTrigger value="active">Active</TabsTrigger>
-              <TabsTrigger value="completed">Completed</TabsTrigger>
-            </TabsList>
-            
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={handleManualRefresh}
-              className="flex items-center gap-2"
-            >
-              <RefreshCcw className="w-4 h-4" />
-              Refresh
-            </Button>
-          </div>
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card className="overflow-hidden border-l-4 border-blue-500">
+            <CardContent className="p-0">
+              <div className="flex">
+                <div className="p-4 flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <ArrowRightCircle className="h-4 w-4 text-blue-500" />
+                    <h3 className="font-medium text-sm text-muted-foreground">ACTIVE ORDERS</h3>
+                  </div>
+                  <p className="text-3xl font-bold">{activeOrdersCount}</p>
+                  <p className="text-sm text-muted-foreground mt-1">Orders in progress</p>
+                </div>
+                <div className="bg-blue-50 p-4 flex items-center justify-center">
+                  <ShoppingBag className="h-10 w-10 text-blue-500" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
           
-          {/* Available Orders Tab */}
-          <TabsContent value="available">
-            <h2 className="text-xl font-semibold mb-4">Available Orders</h2>
-            
-            {isLoading && (
-              <div className="text-center py-12 bg-white rounded-lg border">
-                <p>Loading orders...</p>
+          <Card className="overflow-hidden border-l-4 border-green-500">
+            <CardContent className="p-0">
+              <div className="flex">
+                <div className="p-4 flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Calendar className="h-4 w-4 text-green-500" />
+                    <h3 className="font-medium text-sm text-muted-foreground">TODAY'S EARNINGS</h3>
+                  </div>
+                  <p className="text-3xl font-bold">R{earnings.today.amount.toFixed(2)}</p>
+                  <p className="text-sm text-muted-foreground mt-1">{earnings.today.count} deliveries today</p>
+                </div>
+                <div className="bg-green-50 p-4 flex items-center justify-center">
+                  <WalletCards className="h-10 w-10 text-green-500" />
+                </div>
               </div>
-            )}
-            
-            {error && (
-              <div className="text-center py-6 bg-white rounded-lg border">
-                <p className="text-red-500">{error}</p>
-                {debugInfo && (
-                  <div className="mt-4 p-4 bg-gray-50 rounded text-left text-sm text-gray-700">
-                    <p className="font-semibold">Debug information:</p>
-                    <pre className="whitespace-pre-wrap">{debugInfo}</pre>
+            </CardContent>
+          </Card>
+          
+          <Card className="overflow-hidden border-l-4 border-purple-500">
+            <CardContent className="p-0">
+              <div className="flex">
+                <div className="p-4 flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <TrendingUp className="h-4 w-4 text-purple-500" />
+                    <h3 className="font-medium text-sm text-muted-foreground">TOTAL EARNINGS</h3>
+                  </div>
+                  <p className="text-3xl font-bold">R{earnings.total.amount.toFixed(2)}</p>
+                  <p className="text-sm text-muted-foreground mt-1">{earnings.total.count} total deliveries</p>
+                </div>
+                <div className="bg-purple-50 p-4 flex items-center justify-center">
+                  <Clock className="h-10 w-10 text-purple-500" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+        
+        {/* Orders Tabs */}
+        <Card className="border-t-4 border-t-blue-500">
+          <CardHeader className="pb-0">
+            <div className="flex justify-between items-center">
+              <CardTitle>Order Management</CardTitle>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleManualRefresh}
+                className="flex items-center gap-2"
+              >
+                <RefreshCcw className="w-4 h-4" />
+                Refresh
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-4">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="grid grid-cols-3 mb-6">
+                <TabsTrigger value="available" className="data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700">
+                  <div className="flex items-center gap-2">
+                    <ShoppingBag className="h-4 w-4" />
+                    <span>Available</span>
+                  </div>
+                </TabsTrigger>
+                <TabsTrigger value="active" className="data-[state=active]:bg-purple-50 data-[state=active]:text-purple-700">
+                  <div className="flex items-center gap-2">
+                    <ArrowRightCircle className="h-4 w-4" />
+                    <span>Active</span>
+                  </div>
+                </TabsTrigger>
+                <TabsTrigger value="completed" className="data-[state=active]:bg-green-50 data-[state=active]:text-green-700">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4" />
+                    <span>Completed</span>
+                  </div>
+                </TabsTrigger>
+              </TabsList>
+              
+              {/* Available Orders Tab */}
+              <TabsContent value="available">
+                <h2 className="text-xl font-semibold mb-4">Available Orders</h2>
+                
+                {isLoading && (
+                  <div className="text-center py-12 bg-white rounded-lg border">
+                    <div className="animate-pulse flex flex-col items-center">
+                      <div className="h-12 w-12 bg-blue-100 rounded-full mb-4"></div>
+                      <div className="h-4 w-32 bg-gray-200 rounded mb-3"></div>
+                      <div className="h-3 w-24 bg-gray-100 rounded"></div>
+                    </div>
                   </div>
                 )}
-              </div>
-            )}
-            
-            {!isLoading && !error && orders.length === 0 ? (
-              <div className="text-center py-12 bg-white rounded-lg border">
-                <p className="text-muted-foreground">No available orders at the moment</p>
-                <p className="text-sm text-muted-foreground mt-2">
-                  This could be because there are no orders with status "ready" or "pending" and null runner_id
-                </p>
-                {debugInfo && (
-                  <div className="mt-4 p-4 bg-gray-50 rounded text-left text-sm text-gray-700">
-                    <p className="font-semibold">Debug information:</p>
-                    <pre className="whitespace-pre-wrap">{debugInfo}</pre>
-                  </div>
-                )}
-                <Button 
-                  className="mt-4" 
-                  variant="outline" 
-                  onClick={handleManualRefresh}
-                >
-                  Refresh Orders
-                </Button>
-              </div>
-            ) : (
-              <div>
-                {orders.map(order => (
-                  <Card key={order.id} className="mb-4">
-                    <CardContent className="p-6">
-                      <div className="flex flex-col md:flex-row justify-between">
-                        <div>
-                          <div className="flex items-center gap-2 mb-2">
-                            <h3 className="font-semibold">Order #{order.order_number}</h3>
-                            <Badge className={statusColors[order.status]}>
-                              {statusLabels[order.status]}
-                            </Badge>
-                            <Badge className={paymentStatusColors[order.payment_status] || "bg-gray-100"}>
-                              {order.payment_status ? order.payment_status.charAt(0).toUpperCase() + order.payment_status.slice(1) : "Pending"}
-                            </Badge>
-                          </div>
-                          <p className="text-sm text-muted-foreground mb-4">
-                            {formatOrderDate(order.created_at)}
-                          </p>
-                          <div className="space-y-1 mb-4">
-                            <div className="flex items-start gap-2">
-                              <ShoppingBag className="w-4 h-4 mt-1" />
-                              <div>
-                                <p className="font-medium">{order.merchant?.name}</p>
-                                <p className="text-sm text-muted-foreground">{order.merchant?.location}</p>
-                              </div>
-                            </div>
-                            <div className="flex items-start gap-2">
-                              <MapPin className="w-4 h-4 mt-1" />
-                              <div>
-                                <p className="font-medium">Delivery to:</p>
-                                <p className="text-sm">{order.customer_addresses?.building_name}, Room {order.customer_addresses?.room_number}</p>
-                              </div>
-                            </div>
-                            <div className="flex items-start gap-2">
-                              <CreditCard className="w-4 h-4 mt-1" />
-                              <div>
-                                <p className="text-sm">
-                                  <span className="font-medium">Payment:</span> {order.payment_method === "cash" ? "Cash on Delivery" : "Online Payment"} - 
-                                  <span className={
-                                    order.payment_status === 'paid' ? ' text-green-600 font-medium' : 
-                                    order.payment_status === 'failed' ? ' text-red-600 font-medium' : 
-                                    ' text-yellow-600 font-medium'
-                                  }>
-                                    {' '}{order.payment_status ? order.payment_status.charAt(0).toUpperCase() + order.payment_status.slice(1) : "Pending"}
-                                  </span>
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                          {order.order_items && order.order_items.length > 0 && (
-                            <div>
-                              <p className="text-sm font-medium mb-1">Order items:</p>
-                              <ul className="text-sm list-disc pl-5">
-                                {order.order_items.map((item, index) => (
-                                  <li key={index}>{item.quantity}x {item.menu_item?.name}</li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
-                        </div>
-                        <div className="mt-6 md:mt-0 flex flex-col items-end">
-                          <p className="font-medium text-lg mb-4">R{order.total_amount?.toFixed(2)}</p>
-                          <Button onClick={() => handleAcceptOrder(order.id)}>
-                            Accept Order
-                          </Button>
-                        </div>
+                
+                {error && (
+                  <div className="text-center py-6 bg-white rounded-lg border">
+                    <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-2" />
+                    <p className="text-red-500 font-medium">{error}</p>
+                    {debugInfo && (
+                      <div className="mt-4 p-4 bg-gray-50 rounded text-left text-sm text-gray-700">
+                        <p className="font-semibold">Debug information:</p>
+                        <pre className="whitespace-pre-wrap overflow-x-auto">{debugInfo}</pre>
                       </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </TabsContent>
-          
-          {/* Active Orders Tab */}
-          <TabsContent value="active">
-            <h2 className="text-xl font-semibold mb-4">Active Orders</h2>
-            
-            {isLoading && (
-              <div className="text-center py-12 bg-white rounded-lg border">
-                <p>Loading orders...</p>
-              </div>
-            )}
-            
-            {error && (
-              <div className="text-center py-12 bg-white rounded-lg border">
-                <p className="text-red-500">{error}</p>
-              </div>
-            )}
-            
-            {!isLoading && !error && orders.length === 0 ? (
-              <div className="text-center py-12 bg-white rounded-lg border">
-                <p className="text-muted-foreground">No active orders</p>
-                <p className="text-sm text-muted-foreground mt-2">
-                  Orders you accept will appear here
-                </p>
-              </div>
-            ) : (
-              <div>
-                {orders.map(order => (
-                  <Card key={order.id} className="mb-4">
-                    <CardContent className="p-6">
-                      <div className="flex flex-col md:flex-row justify-between">
-                        <div>
-                          <div className="flex items-center gap-2 mb-2">
-                            <h3 className="font-semibold">Order #{order.order_number}</h3>
-                            <Badge className={statusColors[order.status]}>
-                              {statusLabels[order.status]}
-                            </Badge>
-                            <Badge className={paymentStatusColors[order.payment_status] || "bg-gray-100"}>
-                              {order.payment_status ? order.payment_status.charAt(0).toUpperCase() + order.payment_status.slice(1) : "Pending"}
-                            </Badge>
-                          </div>
-                          <p className="text-sm text-muted-foreground mb-4">
-                            {formatOrderDate(order.created_at)}
-                          </p>
-                          <div className="space-y-2 mb-4">
-                            <div className="flex items-start gap-2">
-                              <ShoppingBag className="w-4 h-4 mt-1" />
+                    )}
+                  </div>
+                )}
+                
+                {!isLoading && !error && orders.length === 0 ? (
+                  <div className="text-center py-12 bg-white rounded-lg border">
+                    <ShoppingBag className="h-12 w-12 text-gray-300 mx-auto mb-2" />
+                    <p className="text-muted-foreground font-medium">No available orders at the moment</p>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Check back soon for new delivery opportunities
+                    </p>
+                    {debugInfo && (
+                      <div className="mt-4 p-4 bg-gray-50 rounded text-left text-sm text-gray-700">
+                        <p className="font-semibold">Debug information:</p>
+                        <pre className="whitespace-pre-wrap overflow-x-auto">{debugInfo}</pre>
+                      </div>
+                    )}
+                    <Button 
+                      className="mt-4" 
+                      variant="outline" 
+                      onClick={handleManualRefresh}
+                    >
+                      Refresh Orders
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {orders.map(order => (
+                      <Card key={order.id} className="hover:border-blue-200 transition-colors">
+                        <CardContent className="p-0">
+                          <div className="p-6">
+                            <div className="flex flex-col md:flex-row justify-between">
                               <div>
-                                <p className="font-medium">{order.merchant?.name}</p>
-                                <p className="text-sm text-muted-foreground">{order.merchant?.location}</p>
-                              </div>
-                            </div>
-                            <div className="flex items-start gap-2">
-                              <MapPin className="w-4 h-4 mt-1" />
-                              <div>
-                                <p className="font-medium">Delivery to:</p>
-                                <p className="text-sm">{order.customer_addresses?.building_name}, Room {order.customer_addresses?.room_number}</p>
-                                {order.customer_addresses?.delivery_instructions && (
-                                  <p className="text-sm text-muted-foreground">
-                                    Note: {order.customer_addresses.delivery_instructions}
-                                  </p>
+                                <div className="flex flex-wrap items-center gap-2 mb-2">
+                                  <h3 className="font-semibold text-lg">Order #{order.order_number}</h3>
+                                  <Badge className={statusColors[order.status]}>
+                                    {statusLabels[order.status]}
+                                  </Badge>
+                                  <Badge className={paymentStatusColors[order.payment_status] || "bg-gray-100"}>
+                                    {order.payment_status ? order.payment_status.charAt(0).toUpperCase() + order.payment_status.slice(1) : "Pending"}
+                                  </Badge>
+                                </div>
+                                <div className="flex items-center gap-1 text-sm text-muted-foreground mb-4">
+                                  <Clock className="h-3 w-3" />
+                                  <span>{formatOrderDate(order.created_at)}</span>
+                                </div>
+                                
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                  <div className="space-y-2">
+                                    <div className="flex items-start gap-2">
+                                      <MapPin className="w-4 h-4 mt-1 text-purple-500" />
+                                      <div>
+                                        <p className="font-medium">Delivery to:</p>
+                                        <p className="text-sm">{order.customer_addresses?.building_name}, Room {order.customer_addresses?.room_number}</p>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                                
+                                {order.order_items && order.order_items.length > 0 && (
+                                  <div className="bg-gray-50 rounded-md p-3">
+                                    <p className="text-sm font-medium mb-2">Order items:</p>
+                                    <ul className="text-sm space-y-1">
+                                      {order.order_items.map((item, index) => (
+                                        <li key={index} className="flex items-center gap-2">
+                                          <span className="bg-blue-100 text-blue-800 text-xs rounded-full px-2 py-1 font-medium">
+                                            {item.quantity}x
+                                          </span>
+                                          <span>{item.menu_item?.name}</span>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </div>
                                 )}
                               </div>
-                            </div>
-                            <div className="flex items-start gap-2">
-                              <CreditCard className="w-4 h-4 mt-1" />
-                              <div>
-                                <p className="text-sm">
-                                  <span className="font-medium">Payment:</span> {order.payment_method === "cash" ? "Cash on Delivery" : "Online Payment"} - 
-                                  <span className={
-                                    order.payment_status === 'paid' ? ' text-green-600 font-medium' : 
-                                    order.payment_status === 'failed' ? ' text-red-600 font-medium' : 
-                                    ' text-yellow-600 font-medium'
-                                  }>
-                                    {' '}{order.payment_status ? order.payment_status.charAt(0).toUpperCase() + order.payment_status.slice(1) : "Pending"}
-                                  </span>
-                                  {order.payment_method === "cash" && (
-                                    <span className="block text-yellow-600">
-                                      Remember to collect R{order.total_amount?.toFixed(2)} from customer
-                                    </span>
-                                  )}
-                                </p>
+                              <div className="mt-6 md:mt-0 flex flex-col items-end">
+                                <div className="text-right mb-4">
+                                  <p className="text-2xl font-bold text-blue-600">R{order.total_amount?.toFixed(2)}</p>
+                                  <p className="text-sm text-muted-foreground">Total amount</p>
+                                </div>
+                                <Button 
+                                  onClick={() => handleAcceptOrder(order.id)}
+                                  size="lg"
+                                  className="bg-blue-600 hover:bg-blue-700 text-white px-6"
+                                >
+                                  Accept Order
+                                </Button>
                               </div>
                             </div>
                           </div>
-                        </div>
-                        <div className="mt-6 md:mt-0 flex flex-col items-end">
-                          <p className="font-medium text-lg mb-4">R{order.total_amount?.toFixed(2)}</p>
-                          
-                          {order.status === "picked_up" && (
-                            <Button onClick={() => handleMarkInTransit(order.id)}>
-                              Mark In Transit
-                            </Button>
-                          )}
-                          
-                          {order.status === "in_transit" && (
-                            <Button onClick={() => handleMarkDelivered(order.id)}>
-                              Mark Delivered
-                            </Button>
-                          )}
-                          
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            className="mt-2"
-                            onClick={() => navigate(`/order-details/${order.id}`)}
-                          >
-                            View Details
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </TabsContent>
-          
-          {/* Completed Orders Tab */}
-          <TabsContent value="completed">
-            <h2 className="text-xl font-semibold mb-4">Completed Orders</h2>
-            
-            {isLoading && (
-              <div className="text-center py-12 bg-white rounded-lg border">
-                <p>Loading orders...</p>
-              </div>
-            )}
-            
-            {error && (
-              <div className="text-center py-12 bg-white rounded-lg border">
-                <p className="text-red-500">{error}</p>
-              </div>
-            )}
-            
-            {!isLoading && !error && orders.length === 0 ? (
-              <div className="text-center py-12 bg-white rounded-lg border">
-                <p className="text-muted-foreground">No completed orders yet</p>
-                <p className="text-sm text-muted-foreground mt-2">
-                  Orders you've delivered will appear here
-                </p>
-              </div>
-            ) : (
-              <div>
-                {orders.map(order => (
-                  <Card key={order.id} className="mb-4">
-                    <CardContent className="p-6">
-                      <div className="flex flex-col md:flex-row justify-between">
-                        <div>
-                          <div className="flex items-center gap-2 mb-2">
-                            <h3 className="font-semibold">Order #{order.order_number}</h3>
-                            <Badge className={statusColors.delivered}>
-                              {statusLabels.delivered}
-                            </Badge>
-                            <Badge className={paymentStatusColors[order.payment_status] || "bg-gray-100"}>
-                              {order.payment_status ? order.payment_status.charAt(0).toUpperCase() + order.payment_status.slice(1) : "Pending"}
-                            </Badge>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
+              
+              {/* Active Orders Tab */}
+              <TabsContent value="active">
+                <h2 className="text-xl font-semibold mb-4">Active Orders</h2>
+                
+                {isLoading && (
+                  <div className="text-center py-12 bg-white rounded-lg border">
+                    <div className="animate-pulse flex flex-col items-center">
+                      <div className="h-12 w-12 bg-purple-100 rounded-full mb-4"></div>
+                      <div className="h-4 w-32 bg-gray-200 rounded mb-3"></div>
+                      <div className="h-3 w-24 bg-gray-100 rounded"></div>
+                    </div>
+                  </div>
+                )}
+                
+                {error && (
+                  <div className="text-center py-12 bg-white rounded-lg border">
+                    <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-2" />
+                    <p className="text-red-500 font-medium">{error}</p>
+                  </div>
+                )}
+                
+                {!isLoading && !error && orders.length === 0 ? (
+                  <div className="text-center py-12 bg-white rounded-lg border">
+                    <ArrowRightCircle className="h-12 w-12 text-gray-300 mx-auto mb-2" />
+                    <p className="text-muted-foreground font-medium">No active orders</p>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Orders you accept will appear here
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {orders.map(order => (
+                      <Card key={order.id} className="hover:border-purple-200 transition-colors border-l-4 border-l-purple-500">
+                        <CardContent className="p-0">
+                          <div className="p-6">
+                            <div className="flex flex-col md:flex-row justify-between">
+                              <div>
+                                <div className="flex flex-wrap items-center gap-2 mb-2">
+                                  <h3 className="font-semibold text-lg">Order #{order.order_number}</h3>
+                                  <Badge className={statusColors[order.status]}>
+                                    {statusLabels[order.status]}
+                                  </Badge>
+                                  <Badge className={paymentStatusColors[order.payment_status] || "bg-gray-100"}>
+                                    {order.payment_status ? order.payment_status.charAt(0).toUpperCase() + order.payment_status.slice(1) : "Pending"}
+                                  </Badge>
+                                </div>
+                                <div className="flex items-center gap-1 text-sm text-muted-foreground mb-4">
+                                  <Clock className="h-3 w-3" />
+                                  <span>{formatOrderDate(order.created_at)}</span>
+                                </div>
+                                
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                  <div className="space-y-3">
+                                    <div className="flex items-start gap-3 p-3 bg-blue-50 rounded-md">
+                                      <ShoppingBag className="w-5 h-5 mt-0.5 text-blue-600" />
+                                      <div>
+                                        <p className="font-medium">Pickup from:</p>
+                                        <p className="text-sm font-semibold">{order.merchant?.name}</p>
+                                        <p className="text-sm text-muted-foreground">{order.merchant?.location}</p>
+                                      </div>
+                                    </div>
+                                    
+                                    <div className="flex items-start gap-3 p-3 bg-purple-50 rounded-md">
+                                      <MapPin className="w-5 h-5 mt-0.5 text-purple-600" />
+                                      <div>
+                                        <p className="font-medium">Deliver to:</p>
+                                        <p className="text-sm font-semibold">{order.customer_addresses?.building_name}, Room {order.customer_addresses?.room_number}</p>
+                                        {order.customer_addresses?.delivery_instructions && (
+                                          <p className="text-sm text-muted-foreground mt-1">
+                                            Note: {order.customer_addresses.delivery_instructions}
+                                          </p>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                  
+                                  <div className="space-y-3">
+                                    <div className="flex items-start gap-3 p-3 bg-green-50 rounded-md">
+                                      <CreditCard className="w-5 h-5 mt-0.5 text-green-600" />
+                                      <div>
+                                        <p className="font-medium">Payment Details:</p>
+                                        <p className="text-sm">{order.payment_method === "cash" ? "Cash on Delivery" : "Online Payment"}</p>
+                                        <p className={`text-sm font-medium ${
+                                          order.payment_status === 'paid' ? 'text-green-600' : 
+                                          order.payment_status === 'failed' ? 'text-red-600' : 
+                                          'text-yellow-600'
+                                        }`}>
+                                          Status: {order.payment_status ? order.payment_status.charAt(0).toUpperCase() + order.payment_status.slice(1) : "Pending"}
+                                        </p>
+                                        {order.payment_method === "cash" && (
+                                          <div className="mt-2 p-2 bg-yellow-100 border border-yellow-200 rounded text-xs text-yellow-800">
+                                            <strong>Collect: R{order.total_amount?.toFixed(2)} in cash</strong>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              <div className="mt-6 md:mt-0 flex flex-col items-end space-y-3">
+                                <div className="text-right">
+                                  <p className="text-2xl font-bold text-purple-600">R{order.total_amount?.toFixed(2)}</p>
+                                  <p className="text-sm text-muted-foreground">Total amount</p>
+                                </div>
+                                
+                                <div className="flex flex-col gap-2">
+                                  {order.status === "picked_up" && (
+                                    <Button 
+                                      onClick={() => handleMarkInTransit(order.id)}
+                                      size="lg"
+                                      className="bg-purple-600 hover:bg-purple-700 text-white px-6"
+                                    >
+                                      Mark In Transit
+                                    </Button>
+                                  )}
+                                  
+                                  {order.status === "in_transit" && (
+                                    <Button 
+                                      onClick={() => handleMarkDelivered(order.id)}
+                                      size="lg"
+                                      className="bg-green-600 hover:bg-green-700 text-white px-6"
+                                    >
+                                      Mark Delivered
+                                    </Button>
+                                  )}
+                                  
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    onClick={() => navigate(`/order-details/${order.id}`)}
+                                    className="flex items-center gap-2"
+                                  >
+                                    <User className="h-3 w-3" />
+                                    View Details
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
                           </div>
-                          <p className="text-sm text-muted-foreground mb-1">
-                            Delivered: {order.delivered_at && formatOrderDate(order.delivered_at)}
-                          </p>
-                          <div className="space-y-1 mt-3">
-                            <div className="flex items-start gap-2">
-                              <ShoppingBag className="w-4 h-4 mt-1" />
-                              <p className="font-medium">{order.merchant?.name}</p>
-                            </div>
-                            <div className="flex items-start gap-2">
-                              <MapPin className="w-4 h-4 mt-1" />
-                              <p className="font-medium">{order.customer_addresses?.building_name}</p>
-                            </div>
-                            <div className="flex items-start gap-2">
-                              <CreditCard className="w-4 h-4 mt-1" />
-                              <p className="text-sm">
-                                {order.payment_method === "cash" ? "Cash on Delivery" : "Online Payment"} - 
-                                <span className={
-                                  order.payment_status === 'paid' ? ' text-green-600 font-medium' : 
-                                  order.payment_status === 'failed' ? ' text-red-600 font-medium' : 
-                                  ' text-yellow-600 font-medium'
-                                }>
-                                  {' '}{order.payment_status ? order.payment_status.charAt(0).toUpperCase() + order.payment_status.slice(1) : "Pending"}
-                                </span>
-                              </p>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
+              
+              {/* Completed Orders Tab */}
+              <TabsContent value="completed">
+                <h2 className="text-xl font-semibold mb-4">Completed Orders</h2>
+                
+                {isLoading && (
+                  <div className="text-center py-12 bg-white rounded-lg border">
+                    <div className="animate-pulse flex flex-col items-center">
+                      <div className="h-12 w-12 bg-green-100 rounded-full mb-4"></div>
+                      <div className="h-4 w-32 bg-gray-200 rounded mb-3"></div>
+                      <div className="h-3 w-24 bg-gray-100 rounded"></div>
+                    </div>
+                  </div>
+                )}
+                
+                {error && (
+                  <div className="text-center py-12 bg-white rounded-lg border">
+                    <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-2" />
+                    <p className="text-red-500 font-medium">{error}</p>
+                  </div>
+                )}
+                
+                {!isLoading && !error && orders.length === 0 ? (
+                  <div className="text-center py-12 bg-white rounded-lg border">
+                    <CheckCircle2 className="h-12 w-12 text-gray-300 mx-auto mb-2" />
+                    <p className="text-muted-foreground font-medium">No completed orders yet</p>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Orders you've delivered will appear here
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {orders.map(order => (
+                      <Card key={order.id} className="hover:border-green-200 transition-colors border-l-4 border-l-green-500">
+                        <CardContent className="p-0">
+                          <div className="p-6">
+                            <div className="flex flex-col md:flex-row justify-between">
+                              <div>
+                                <div className="flex flex-wrap items-center gap-2 mb-2">
+                                  <h3 className="font-semibold text-lg">Order #{order.order_number}</h3>
+                                  <Badge className={statusColors.delivered}>
+                                    {statusLabels.delivered}
+                                  </Badge>
+                                  <Badge className={paymentStatusColors[order.payment_status] || "bg-gray-100"}>
+                                    {order.payment_status ? order.payment_status.charAt(0).toUpperCase() + order.payment_status.slice(1) : "Pending"}
+                                  </Badge>
+                                </div>
+                                <div className="flex items-center gap-1 text-sm text-green-600 mb-3">
+                                  <CheckCircle2 className="h-3 w-3" />
+                                  <span>Delivered: {order.delivered_at && formatOrderDate(order.delivered_at)}</span>
+                                </div>
+                                
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+                                  <div className="flex items-center gap-2">
+                                    <ShoppingBag className="w-4 h-4 text-blue-500" />
+                                    <span className="font-medium">{order.merchant?.name}</span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <MapPin className="w-4 h-4 text-purple-500" />
+                                    <span className="font-medium">{order.customer_addresses?.building_name}</span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <CreditCard className="w-4 h-4 text-green-500" />
+                                    <span>
+                                      {order.payment_method === "cash" ? "Cash" : "Online"} - 
+                                      <span className={`ml-1 font-medium ${
+                                        order.payment_status === 'paid' ? 'text-green-600' : 
+                                        order.payment_status === 'failed' ? 'text-red-600' : 
+                                        'text-yellow-600'
+                                      }`}>
+                                        {order.payment_status ? order.payment_status.charAt(0).toUpperCase() + order.payment_status.slice(1) : "Pending"}
+                                      </span>
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="mt-6 md:mt-0 flex flex-col items-end space-y-2">
+                                <div className="text-right">
+                                  <p className="text-xl font-bold text-green-600">R{order.total_amount?.toFixed(2)}</p>
+                                  <p className="text-sm text-green-600 font-medium">
+                                    Earned: R15.00
+                                  </p>
+                                </div>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  onClick={() => navigate(`/order-details/${order.id}`)}
+                                  className="flex items-center gap-2"
+                                >
+                                  <User className="h-3 w-3" />
+                                  View Details
+                                </Button>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                        <div className="mt-6 md:mt-0 flex flex-col items-end">
-                          <p className="font-medium text-lg mb-4">R{order.total_amount?.toFixed(2)}</p>
-                          <p className="text-sm text-green-600 font-medium">
-                            Earned: R15.00
-                          </p>
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            className="mt-2"
-                            onClick={() => navigate(`/order-details/${order.id}`)}
-                          >
-                            View Details
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </TabsContent>
-        </Tabs>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
