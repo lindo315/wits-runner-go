@@ -940,6 +940,7 @@ export type Database = {
         Row: {
           created_at: string | null
           email: string
+          free_delivery_used: boolean | null
           full_name: string
           id: string
           phone_number: string | null
@@ -951,6 +952,7 @@ export type Database = {
         Insert: {
           created_at?: string | null
           email: string
+          free_delivery_used?: boolean | null
           full_name: string
           id?: string
           phone_number?: string | null
@@ -962,6 +964,7 @@ export type Database = {
         Update: {
           created_at?: string | null
           email?: string
+          free_delivery_used?: boolean | null
           full_name?: string
           id?: string
           phone_number?: string | null
@@ -995,6 +998,10 @@ export type Database = {
           created_at: string
           updated_at: string
         }[]
+      }
+      is_first_order: {
+        Args: { user_id: string }
+        Returns: boolean
       }
     }
     Enums: {
