@@ -420,6 +420,13 @@ const Dashboard = () => {
         description: "Order marked as in transit"
       });
       
+      // Update orders in state
+      setOrders(prevOrders => 
+        prevOrders.map(order => 
+          order.id === orderId ? { ...order, status: "in_transit" } : order
+        )
+      );
+      
       fetchOrders();
     } catch (err) {
       console.error("Error updating order:", err);

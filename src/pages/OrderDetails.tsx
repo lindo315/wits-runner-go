@@ -187,27 +187,11 @@ const OrderDetails = () => {
       console.log("Marking order as in transit...");
       console.log("Order ID:", order.id);
       console.log("Current user ID:", currentUser.id);
-      console.log("Current order status:", order.status);
       
-      // Check current order status before updating
-      const { data: currentOrder, error: fetchError } = await supabase
-        .from("orders")
-        .select("status")
-        .eq("id", order.id)
-        .single();
-        
-      if (fetchError) {
-        console.error("Error checking order status:", fetchError);
-        throw fetchError;
-      }
-      
-      console.log("Database current status:", currentOrder?.status);
-      
+      // Update the order status
       const { data, error: updateError } = await supabase
         .from("orders")
-        .update({ 
-          status: "in_transit"  // Make sure this matches an allowed value in the database
-        })
+        .update({ status: "in_transit" })
         .eq("id", order.id)
         .select();
       
