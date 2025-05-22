@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
@@ -190,9 +189,25 @@ const OrderDetails = () => {
       console.log("Current user ID:", currentUser.id);
       console.log("Current order status:", order.status);
       
+      // Check current order status before updating
+      const { data: currentOrder, error: fetchError } = await supabase
+        .from("orders")
+        .select("status")
+        .eq("id", order.id)
+        .single();
+        
+      if (fetchError) {
+        console.error("Error checking order status:", fetchError);
+        throw fetchError;
+      }
+      
+      console.log("Database current status:", currentOrder?.status);
+      
       const { data, error: updateError } = await supabase
         .from("orders")
-        .update({ status: "in_transit" })
+        .update({ 
+          status: "in_transit"  // Make sure this matches an allowed value in the database
+        })
         .eq("id", order.id)
         .select();
       

@@ -360,13 +360,34 @@ const Dashboard = () => {
     if (!currentUser) return;
     
     try {
-      const { error: updateError } = await supabase
+      setIsLoading(true);
+      console.log("Marking order as in transit...");
+      console.log("Order ID:", orderId);
+      console.log("Current user ID:", currentUser.id);
+      
+      // First check if the order exists and what its current status is
+      const { data: orderData, error: fetchError } = await supabase
         .from("orders")
-        .update({
-          status: "in_transit"
+        .select("status")
+        .eq("id", orderId)
+        .single();
+      
+      if (fetchError) {
+        console.error("Error fetching order:", fetchError);
+        throw fetchError;
+      }
+      
+      console.log("Current order status:", orderData?.status);
+      
+      // Update order status
+      const { data, error: updateError } = await supabase
+        .from("orders")
+        .update({ 
+          status: "in_transit"  // Make sure this status value is allowed by the database
         })
         .eq("id", orderId)
-        .eq("runner_id", currentUser.id);
+        .eq("runner_id", currentUser.id)
+        .select();
       
       if (updateError) {
         console.error("Error updating order status:", updateError);
@@ -377,6 +398,8 @@ const Dashboard = () => {
         });
         throw updateError;
       }
+      
+      console.log("Update response:", data);
       
       // Add to order status history
       const { error: historyError } = await supabase
@@ -405,6 +428,8 @@ const Dashboard = () => {
         description: "Could not update order status. Please try again.",
         variant: "destructive"
       });
+    } finally {
+      setIsLoading(false);
     }
   };
   
