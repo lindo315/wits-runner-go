@@ -92,6 +92,7 @@ const Dashboard = () => {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isUpdatingOrder, setIsUpdatingOrder] = useState(false);
   
   // Status styling
   const statusLabels = {
@@ -125,7 +126,7 @@ const Dashboard = () => {
   
   // Fetch orders based on active tab
   const fetchOrders = async () => {
-    if (!currentUser) return;
+    if (!currentUser || isUpdatingOrder) return;
     
     try {
       setIsLoading(true);
@@ -371,6 +372,7 @@ const Dashboard = () => {
     if (!currentUser) return;
     
     try {
+      setIsUpdatingOrder(true);
       setIsLoading(true);
       console.log("Marking order as in transit...");
       console.log("Order ID:", orderId);
@@ -415,14 +417,18 @@ const Dashboard = () => {
         description: "Order marked as in transit"
       });
       
-      // Update orders in state
+      // Update orders in state without refetching immediately
       setOrders(prevOrders => 
         prevOrders.map(order => 
           order.id === orderId ? { ...order, status: "in_transit" } : order
         )
       );
       
-      fetchOrders();
+      // Short delay before refetching to ensure the state update is completed
+      setTimeout(() => {
+        fetchOrders();
+        setIsUpdatingOrder(false);
+      }, 500);
     } catch (err) {
       console.error("Error updating order:", err);
       toast({
@@ -430,6 +436,7 @@ const Dashboard = () => {
         description: "Could not update order status. Please try again.",
         variant: "destructive"
       });
+      setIsUpdatingOrder(false);
     } finally {
       setIsLoading(false);
     }
@@ -439,6 +446,7 @@ const Dashboard = () => {
     if (!currentUser) return;
     
     try {
+      setIsUpdatingOrder(true);
       setIsLoading(true);
       const now = new Date().toISOString();
       
@@ -509,14 +517,18 @@ const Dashboard = () => {
         description: "Order has been successfully delivered and earnings recorded"
       });
       
-      // Update orders in state and fetch fresh data
+      // Update orders in state first
       setOrders(prevOrders => 
-        prevOrders.map(order => 
-          order.id === orderId ? { ...order, status: "delivered", delivered_at: now } : order
-        )
+        prevOrders.filter(order => order.id !== orderId)
       );
       
-      fetchOrders();
+      // Short delay before refetching to ensure the state update is completed
+      setTimeout(() => {
+        // Set active tab to completed since the order was delivered
+        setActiveTab("completed");
+        fetchOrders();
+        setIsUpdatingOrder(false);
+      }, 500);
     } catch (err) {
       console.error("Error marking order as delivered:", err);
       toast({
@@ -524,6 +536,7 @@ const Dashboard = () => {
         description: "Could not mark order as delivered",
         variant: "destructive"
       });
+      setIsUpdatingOrder(false);
     } finally {
       setIsLoading(false);
     }
@@ -557,7 +570,9 @@ const Dashboard = () => {
         (payload) => {
           console.log('Real-time update received:', payload);
           // Refresh orders when relevant changes are detected
-          fetchOrders();
+          if (!isUpdatingOrder) {
+            fetchOrders();
+          }
         }
       )
       .subscribe();
@@ -585,7 +600,7 @@ const Dashboard = () => {
       supabase.removeChannel(ordersChannel);
       supabase.removeChannel(earningsChannel);
     };
-  }, [currentUser]);
+  }, [currentUser, isUpdatingOrder]);
   
   // Effect to fetch data when tab changes
   useEffect(() => {
