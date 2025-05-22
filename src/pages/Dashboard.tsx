@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -93,7 +92,6 @@ const Dashboard = () => {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [debugInfo, setDebugInfo] = useState<string | null>(null);
   
   // Status styling
   const statusLabels = {
@@ -132,7 +130,6 @@ const Dashboard = () => {
     try {
       setIsLoading(true);
       setError(null);
-      setDebugInfo(null);
       
       console.log("Fetching orders for tab:", activeTab);
       console.log("Current user ID:", currentUser.id);
@@ -144,10 +141,8 @@ const Dashboard = () => {
         
       if (countError) {
         console.error("Error counting total orders:", countError);
-        setDebugInfo(`Error counting orders: ${countError.message || JSON.stringify(countError)}`);
       } else {
         console.log("Total orders in database:", totalOrdersCount);
-        setDebugInfo(`Total orders in database: ${totalOrdersCount || 0}`);
       }
       
       let query = supabase
@@ -209,7 +204,6 @@ const Dashboard = () => {
       if (fetchError) {
         console.error("Query error:", fetchError);
         setError(`Failed to load orders: ${fetchError.message || "Unknown error"}`);
-        setDebugInfo(prevInfo => `${prevInfo || ''}\nQuery error: ${fetchError.message || JSON.stringify(fetchError)}`);
         throw fetchError;
       }
       
@@ -219,10 +213,8 @@ const Dashboard = () => {
       // Debugging any data issues
       if (data && data.length > 0) {
         console.log("Sample order data:", data[0]);
-        setDebugInfo(prevInfo => `${prevInfo || ''}\nOrders found for current tab: ${data.length}`);
       } else {
         console.log("No orders found for the current query");
-        setDebugInfo(prevInfo => `${prevInfo || ''}\nNo orders found matching the query criteria. Check if orders have status="pending" or "ready" and runner_id=null (for available tab).`);
         
         // If no orders found, check if there are any "ready" or "pending" orders regardless of runner_id
         if (activeTab === "available") {
@@ -232,11 +224,6 @@ const Dashboard = () => {
             .in("status", ["ready", "pending"]);
             
           console.log("All ready/pending orders:", availableOrders);
-          setDebugInfo(prevInfo => `${prevInfo || ''}\nAll orders with status="ready" or "pending": ${availableOrders?.length || 0}`);
-          
-          if (availableOrders && availableOrders.length > 0) {
-            setDebugInfo(prevInfo => `${prevInfo || ''}\nNote: There are ready/pending orders, but they may already be assigned to runners.`);
-          }
         }
       }
       
@@ -360,7 +347,6 @@ const Dashboard = () => {
       
       if (historyError) {
         console.error("Error updating order history:", historyError);
-        // Continue anyway as this is not critical
       }
       
       toast({
@@ -781,12 +767,6 @@ const Dashboard = () => {
                   <div className="text-center py-6 bg-white rounded-lg border">
                     <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-2" />
                     <p className="text-red-500 font-medium">{error}</p>
-                    {debugInfo && (
-                      <div className="mt-4 p-4 bg-gray-50 rounded text-left text-sm text-gray-700">
-                        <p className="font-semibold">Debug information:</p>
-                        <pre className="whitespace-pre-wrap overflow-x-auto">{debugInfo}</pre>
-                      </div>
-                    )}
                   </div>
                 )}
                 
@@ -797,12 +777,6 @@ const Dashboard = () => {
                     <p className="text-sm text-muted-foreground mt-2">
                       Check back soon for new delivery opportunities
                     </p>
-                    {debugInfo && (
-                      <div className="mt-4 p-4 bg-gray-50 rounded text-left text-sm text-gray-700">
-                        <p className="font-semibold">Debug information:</p>
-                        <pre className="whitespace-pre-wrap overflow-x-auto">{debugInfo}</pre>
-                      </div>
-                    )}
                     <Button 
                       className="mt-4" 
                       variant="outline" 
