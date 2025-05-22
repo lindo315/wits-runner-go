@@ -365,26 +365,10 @@ const Dashboard = () => {
       console.log("Order ID:", orderId);
       console.log("Current user ID:", currentUser.id);
       
-      // First check if the order exists and what its current status is
-      const { data: orderData, error: fetchError } = await supabase
-        .from("orders")
-        .select("status")
-        .eq("id", orderId)
-        .single();
-      
-      if (fetchError) {
-        console.error("Error fetching order:", fetchError);
-        throw fetchError;
-      }
-      
-      console.log("Current order status:", orderData?.status);
-      
       // Update order status
       const { data, error: updateError } = await supabase
         .from("orders")
-        .update({ 
-          status: "in_transit"  // Make sure this status value is allowed by the database
-        })
+        .update({ status: "in_transit" })
         .eq("id", orderId)
         .eq("runner_id", currentUser.id)
         .select();
@@ -444,8 +428,10 @@ const Dashboard = () => {
     if (!currentUser) return;
     
     try {
+      setIsLoading(true);
       const now = new Date().toISOString();
       
+      // Update order status
       const { error: updateError } = await supabase
         .from("orders")
         .update({
@@ -471,7 +457,7 @@ const Dashboard = () => {
         console.error("Error updating order history:", historyError);
       }
       
-      // Create an earning record
+      // Create an earning record with more detailed fee structure
       const { data: orderData } = await supabase
         .from("orders")
         .select("total_amount")
@@ -479,24 +465,40 @@ const Dashboard = () => {
         .single();
       
       if (orderData) {
-        const baseFee = 15.00; // Example base fee, adjust based on your logic
+        const baseFee = 15.00; // Base delivery fee
+        const tipAmount = 0.00; // Could be calculated or provided by user input
+        const bonusAmount = 0.00; // Could be calculated based on conditions
+        const totalEarned = baseFee + tipAmount + bonusAmount;
         
-        await supabase.from("runner_earnings").insert({
+        const { error: earningsError } = await supabase.from("runner_earnings").insert({
           runner_id: currentUser.id,
           order_id: orderId,
           base_fee: baseFee,
-          total_earned: baseFee,
+          tip_amount: tipAmount,
+          bonus_amount: bonusAmount,
+          total_earned: totalEarned,
           payout_status: "pending"
         });
+        
+        if (earningsError) {
+          console.error("Error creating earnings record:", earningsError);
+        }
       }
       
       toast({
         title: "Order delivered",
-        description: "Order has been successfully delivered"
+        description: "Order has been successfully delivered and earnings recorded"
       });
       
+      // Update orders in state and fetch fresh data
+      setOrders(prevOrders => 
+        prevOrders.map(order => 
+          order.id === orderId ? { ...order, status: "delivered", delivered_at: now } : order
+        )
+      );
+      
       fetchOrders();
-      fetchEarnings();
+      fetchEarnings(); // Refresh earnings data
     } catch (err) {
       console.error("Error marking order as delivered:", err);
       toast({
@@ -504,6 +506,8 @@ const Dashboard = () => {
         description: "Could not mark order as delivered",
         variant: "destructive"
       });
+    } finally {
+      setIsLoading(false);
     }
   };
   

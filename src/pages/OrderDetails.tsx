@@ -274,16 +274,25 @@ const OrderDetails = () => {
         console.error("Error updating order history:", historyError);
       }
       
-      // Create an earning record
+      // Create an earning record with a fixed base fee
       const baseFee = 15.00; // Example base fee
+      const tipAmount = 0.00; // Could be calculated or provided by user input
+      const bonusAmount = 0.00; // Could be calculated based on conditions
+      const totalEarned = baseFee + tipAmount + bonusAmount;
       
-      await supabase.from("runner_earnings").insert({
+      const { error: earningsError } = await supabase.from("runner_earnings").insert({
         runner_id: currentUser.id,
         order_id: order.id,
         base_fee: baseFee,
-        total_earned: baseFee,
+        tip_amount: tipAmount,
+        bonus_amount: bonusAmount,
+        total_earned: totalEarned,
         payout_status: "pending"
       });
+      
+      if (earningsError) {
+        console.error("Error creating earnings record:", earningsError);
+      }
       
       // Update order in state
       setOrder({
@@ -294,7 +303,7 @@ const OrderDetails = () => {
       
       toast({
         title: "Order delivered",
-        description: "Order has been successfully delivered"
+        description: "Order has been successfully delivered and earnings recorded"
       });
     } catch (err: any) {
       console.error("Error marking order as delivered:", err);
@@ -391,7 +400,7 @@ const OrderDetails = () => {
                   )}
                   
                   {order.status === "in_transit" && (
-                    <Button onClick={handleMarkDelivered} disabled={isUpdating}>
+                    <Button onClick={handleMarkDelivered} disabled={isUpdating} className="bg-green-600 hover:bg-green-700">
                       {isUpdating ? "Processing..." : "Mark Delivered"}
                     </Button>
                   )}
