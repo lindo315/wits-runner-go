@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -7,7 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { 
   MapPin, 
@@ -63,6 +64,17 @@ interface EarningsSummary {
   weekly: { count: number; amount: number };
   monthly: { count: number; amount: number };
   total: { count: number; amount: number };
+}
+
+interface Earning {
+  id: string;
+  order_id: string;
+  runner_id: string;
+  base_fee: number;
+  tip_amount: number;
+  bonus_amount: number;
+  total_earned: number;
+  created_at: string;
 }
 
 const Dashboard = () => {
@@ -243,12 +255,21 @@ const Dashboard = () => {
     if (!currentUser) return;
     
     try {
+      setIsLoading(true);
+      console.log("Fetching earnings for runner ID:", currentUser.id);
+      
+      // Directly fetch from runner_earnings table
       const { data: earningsData, error: earningsError } = await supabase
         .from("runner_earnings")
         .select("*")
         .eq("runner_id", currentUser.id);
       
-      if (earningsError) throw earningsError;
+      if (earningsError) {
+        console.error("Error fetching earnings:", earningsError);
+        return;
+      }
+      
+      console.log("Earnings data fetched:", earningsData);
       
       // Calculate summary
       const today = new Date();
@@ -260,41 +281,45 @@ const Dashboard = () => {
       
       const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
       
-      const summary = {
+      const summary: EarningsSummary = {
         today: { count: 0, amount: 0 },
         weekly: { count: 0, amount: 0 },
         monthly: { count: 0, amount: 0 },
         total: { count: earningsData?.length || 0, amount: 0 }
       };
       
-      earningsData?.forEach(earning => {
-        // Add to total
-        summary.total.amount += earning.total_earned;
-        
-        // Check if today
-        const earningDate = new Date(earning.created_at);
-        if (earningDate >= today) {
-          summary.today.count++;
-          summary.today.amount += earning.total_earned;
-        }
-        
-        // Check if this week
-        if (earningDate >= weekStart) {
-          summary.weekly.count++;
-          summary.weekly.amount += earning.total_earned;
-        }
-        
-        // Check if this month
-        if (earningDate >= monthStart) {
-          summary.monthly.count++;
-          summary.monthly.amount += earning.total_earned;
-        }
-      });
+      if (earningsData && earningsData.length > 0) {
+        earningsData.forEach((earning: Earning) => {
+          // Add to total
+          summary.total.amount += earning.total_earned;
+          
+          // Check if today
+          const earningDate = new Date(earning.created_at);
+          if (earningDate >= today) {
+            summary.today.count++;
+            summary.today.amount += earning.total_earned;
+          }
+          
+          // Check if this week
+          if (earningDate >= weekStart) {
+            summary.weekly.count++;
+            summary.weekly.amount += earning.total_earned;
+          }
+          
+          // Check if this month
+          if (earningDate >= monthStart) {
+            summary.monthly.count++;
+            summary.monthly.amount += earning.total_earned;
+          }
+        });
+      }
       
+      console.log("Earnings summary calculated:", summary);
       setEarnings(summary);
     } catch (err) {
-      console.error("Error fetching earnings:", err);
-      // Don't set an error message for earnings to avoid cluttering the UI
+      console.error("Error calculating earnings:", err);
+    } finally {
+      setIsLoading(false);
     }
   };
   
@@ -482,6 +507,14 @@ const Dashboard = () => {
         
         if (earningsError) {
           console.error("Error creating earnings record:", earningsError);
+          toast({
+            title: "Error recording earnings",
+            description: "Your earnings will still be tracked, but please contact support if you don't see them in your dashboard",
+            variant: "destructive"
+          });
+        } else {
+          // Immediately fetch updated earnings to refresh the dashboard
+          fetchEarnings();
         }
       }
       
@@ -498,7 +531,6 @@ const Dashboard = () => {
       );
       
       fetchOrders();
-      fetchEarnings(); // Refresh earnings data
     } catch (err) {
       console.error("Error marking order as delivered:", err);
       toast({
@@ -544,10 +576,30 @@ const Dashboard = () => {
       )
       .subscribe();
     
+    // Subscribe to earnings changes
+    const earningsChannel = supabase
+      .channel('earnings-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'runner_earnings',
+          filter: `runner_id=eq.${currentUser.id}`
+        },
+        (payload) => {
+          console.log('Real-time earnings update received:', payload);
+          // Refresh earnings when relevant changes are detected
+          fetchEarnings();
+        }
+      )
+      .subscribe();
+    
     return () => {
       supabase.removeChannel(ordersChannel);
+      supabase.removeChannel(earningsChannel);
     };
-  }, [currentUser, activeTab]);
+  }, [currentUser]);
   
   // Effect to fetch data when tab changes
   useEffect(() => {
@@ -561,9 +613,10 @@ const Dashboard = () => {
   
   const handleManualRefresh = () => {
     fetchOrders();
+    fetchEarnings();
     toast({
-      title: "Refreshing orders",
-      description: "Fetching the latest order data",
+      title: "Refreshing data",
+      description: "Fetching the latest order and earnings data",
     });
   };
   
