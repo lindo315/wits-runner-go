@@ -1,5 +1,4 @@
 
-
 import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
@@ -49,7 +48,7 @@ interface Order {
 const Dashboard = () => {
   const [user, setUser] = useState(null)
   const [isRefreshing, setIsRefreshing] = useState(false)
-  const [selectedStatus, setSelectedStatus] = useState('')
+  const [selectedStatus, setSelectedStatus] = useState('all')
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [newStatus, setNewStatus] = useState('')
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
@@ -148,9 +147,9 @@ const Dashboard = () => {
     return <div>Error fetching orders: {error.message}</div>
   }
 
-  const filteredOrders = selectedStatus
-    ? orders?.filter((order) => order.status === selectedStatus)
-    : orders
+  const filteredOrders = selectedStatus === 'all'
+    ? orders
+    : orders?.filter((order) => order.status === selectedStatus)
 
   const handleStatusUpdate = async () => {
     if (!selectedOrder || !newStatus) return
@@ -186,12 +185,12 @@ const Dashboard = () => {
 
       <div className="mb-4 flex items-center space-x-2">
         <Label htmlFor="status-filter">Filter by Status:</Label>
-        <Select onValueChange={setSelectedStatus}>
+        <Select onValueChange={setSelectedStatus} defaultValue="all">
           <SelectTrigger id="status-filter">
             <SelectValue placeholder="All Statuses" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All Statuses</SelectItem>
+            <SelectItem value="all">All Statuses</SelectItem>
             <SelectItem value="pending">Pending</SelectItem>
             <SelectItem value="processing">Processing</SelectItem>
             <SelectItem value="out_for_delivery">Out for Delivery</SelectItem>
@@ -276,4 +275,3 @@ const Dashboard = () => {
 }
 
 export default Dashboard
-
