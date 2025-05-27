@@ -33,6 +33,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import { notifyRunnersOfNewOrder } from "@/services/orderNotifications"
 
 // Define Order type inline
@@ -140,16 +147,40 @@ const Dashboard = () => {
 
   // Early returns only after all hooks have been called
   if (isLoading) {
-    return <div>Loading orders...</div>
+    return <div className="flex items-center justify-center min-h-screen">
+      <div className="text-lg">Loading orders...</div>
+    </div>
   }
 
   if (isError) {
-    return <div>Error fetching orders: {error.message}</div>
+    return <div className="flex items-center justify-center min-h-screen">
+      <div className="text-lg text-red-600">Error fetching orders: {error.message}</div>
+    </div>
   }
 
   const filteredOrders = selectedStatus === 'all'
     ? orders
     : orders?.filter((order) => order.status === selectedStatus)
+
+  // Calculate metrics
+  const activeOrders = orders?.filter(order => 
+    ['pending', 'processing', 'out_for_delivery'].includes(order.status)
+  ).length || 0
+
+  const todayStart = new Date()
+  todayStart.setHours(0, 0, 0, 0)
+  
+  const todaysOrders = orders?.filter(order => 
+    new Date(order.created_at) >= todayStart
+  ) || []
+  
+  const todaysEarnings = todaysOrders.reduce((sum, order) => 
+    sum + order.total_amount, 0
+  )
+  
+  const totalEarnings = orders?.reduce((sum, order) => 
+    sum + order.total_amount, 0
+  ) || 0
 
   const handleStatusUpdate = async () => {
     if (!selectedOrder || !newStatus) return
@@ -179,97 +210,172 @@ const Dashboard = () => {
     setIsRefreshing(false)
   }
 
-  return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">Dashboard</h1>
+  const getStatusBadgeVariant = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return 'outline'
+      case 'processing':
+        return 'secondary'
+      case 'out_for_delivery':
+        return 'default'
+      case 'delivered':
+        return 'default'
+      case 'cancelled':
+        return 'destructive'
+      default:
+        return 'secondary'
+    }
+  }
 
-      <div className="mb-4 flex items-center space-x-2">
-        <Label htmlFor="status-filter">Filter by Status:</Label>
-        <Select onValueChange={setSelectedStatus} defaultValue="all">
-          <SelectTrigger id="status-filter">
-            <SelectValue placeholder="All Statuses" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Statuses</SelectItem>
-            <SelectItem value="pending">Pending</SelectItem>
-            <SelectItem value="processing">Processing</SelectItem>
-            <SelectItem value="out_for_delivery">Out for Delivery</SelectItem>
-            <SelectItem value="delivered">Delivered</SelectItem>
-            <SelectItem value="cancelled">Cancelled</SelectItem>
-          </SelectContent>
-        </Select>
-        {isRefreshing && <Badge variant="outline">Refreshing...</Badge>}
+  return (
+    <div className="container mx-auto p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+        {isRefreshing && <Badge variant="outline" className="animate-pulse">Refreshing...</Badge>}
       </div>
 
-      <Table>
-        <TableCaption>A list of your recent orders.</TableCaption>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="w-[100px]">Order #</TableHead>
-            <TableHead>Customer</TableHead>
-            <TableHead>Date</TableHead>
-            <TableHead>Amount</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {filteredOrders?.map((order) => (
-            <TableRow key={order.id}>
-              <TableCell className="font-medium">{order.order_number}</TableCell>
-              <TableCell>{order.customer_id}</TableCell>
-              <TableCell>{format(new Date(order.created_at), 'MMM d, yyyy h:mm a')}</TableCell>
-              <TableCell>R {order.total_amount.toFixed(2)}</TableCell>
-              <TableCell>
-                <Badge variant="secondary">{order.status}</Badge>
-              </TableCell>
-              <TableCell className="text-right">
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <Button variant="outline">Update Status</Button>
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-[425px]">
-                    <DialogHeader>
-                      <DialogTitle>Update Order Status</DialogTitle>
-                      <DialogDescription>
-                        Update the status of order #{order.order_number}.
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="grid gap-4 py-4">
-                      <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="status">Status</Label>
-                        <Select onValueChange={setNewStatus} defaultValue={order.status}>
-                          <SelectTrigger className="col-span-3">
-                            <SelectValue placeholder="Select a status" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="pending">Pending</SelectItem>
-                            <SelectItem value="processing">Processing</SelectItem>
-                            <SelectItem value="out_for_delivery">Out for Delivery</SelectItem>
-                            <SelectItem value="delivered">Delivered</SelectItem>
-                            <SelectItem value="cancelled">Cancelled</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                    <Button onClick={() => {
-                      setSelectedOrder(order)
-                      handleStatusUpdate()
-                    }}>Update Status</Button>
-                  </DialogContent>
-                </Dialog>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-        <TableFooter>
-          <TableRow>
-            <TableCell colSpan={6}>
-              {orders?.length} order(s)
-            </TableCell>
-          </TableRow>
-        </TableFooter>
-      </Table>
+      {/* Metrics Cards */}
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Active Orders</CardTitle>
+            <div className="h-4 w-4 rounded-full bg-blue-500"></div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{activeOrders}</div>
+            <p className="text-xs text-muted-foreground">
+              Currently being processed
+            </p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Today's Earnings</CardTitle>
+            <div className="h-4 w-4 rounded-full bg-green-500"></div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">R {todaysEarnings.toFixed(2)}</div>
+            <p className="text-xs text-muted-foreground">
+              {todaysOrders.length} orders today
+            </p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Earnings</CardTitle>
+            <div className="h-4 w-4 rounded-full bg-purple-500"></div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">R {totalEarnings.toFixed(2)}</div>
+            <p className="text-xs text-muted-foreground">
+              {orders?.length || 0} total orders
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Filters */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Recent Orders</CardTitle>
+          <CardDescription>
+            Manage and track all your orders
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="mb-4 flex items-center space-x-2">
+            <Label htmlFor="status-filter">Filter by Status:</Label>
+            <Select onValueChange={setSelectedStatus} defaultValue="all">
+              <SelectTrigger id="status-filter" className="w-48">
+                <SelectValue placeholder="All Statuses" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="processing">Processing</SelectItem>
+                <SelectItem value="out_for_delivery">Out for Delivery</SelectItem>
+                <SelectItem value="delivered">Delivered</SelectItem>
+                <SelectItem value="cancelled">Cancelled</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[100px]">Order #</TableHead>
+                  <TableHead>Customer</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Amount</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredOrders?.map((order) => (
+                  <TableRow key={order.id}>
+                    <TableCell className="font-medium">{order.order_number}</TableCell>
+                    <TableCell>{order.customer_id}</TableCell>
+                    <TableCell>{format(new Date(order.created_at), 'MMM d, yyyy h:mm a')}</TableCell>
+                    <TableCell className="font-medium">R {order.total_amount.toFixed(2)}</TableCell>
+                    <TableCell>
+                      <Badge variant={getStatusBadgeVariant(order.status)} className="capitalize">
+                        {order.status.replace('_', ' ')}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button variant="outline" size="sm">Update Status</Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-[425px]">
+                          <DialogHeader>
+                            <DialogTitle>Update Order Status</DialogTitle>
+                            <DialogDescription>
+                              Update the status of order #{order.order_number}.
+                            </DialogDescription>
+                          </DialogHeader>
+                          <div className="grid gap-4 py-4">
+                            <div className="grid grid-cols-4 items-center gap-4">
+                              <Label htmlFor="status">Status</Label>
+                              <Select onValueChange={setNewStatus} defaultValue={order.status}>
+                                <SelectTrigger className="col-span-3">
+                                  <SelectValue placeholder="Select a status" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="pending">Pending</SelectItem>
+                                  <SelectItem value="processing">Processing</SelectItem>
+                                  <SelectItem value="out_for_delivery">Out for Delivery</SelectItem>
+                                  <SelectItem value="delivered">Delivered</SelectItem>
+                                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+                          <Button onClick={() => {
+                            setSelectedOrder(order)
+                            handleStatusUpdate()
+                          }}>Update Status</Button>
+                        </DialogContent>
+                      </Dialog>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+              <TableFooter>
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center">
+                    Showing {filteredOrders?.length || 0} of {orders?.length || 0} orders
+                  </TableCell>
+                </TableRow>
+              </TableFooter>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }
