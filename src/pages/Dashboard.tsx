@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
@@ -45,7 +46,6 @@ interface Order {
 }
 
 const Dashboard = () => {
-  // ... keep existing code (state variables and hooks)
   const [user, setUser] = useState(null)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [selectedStatus, setSelectedStatus] = useState('')
@@ -124,6 +124,7 @@ const Dashboard = () => {
     setIsRefreshing(false)
   }
 
+  // Fixed useEffect - removed isRefreshing from dependencies to prevent infinite re-renders
   useEffect(() => {
     if (!user) return
 
@@ -146,13 +147,9 @@ const Dashboard = () => {
             await notifyRunnersOfNewOrder(payload.new.id)
           }
           
-          // Delay refetch to prevent race conditions
+          // Use a ref to track refreshing state instead of state dependency
           setTimeout(() => {
-            setIsRefreshing(true)
-            setTimeout(() => {
-              refetch()
-              setIsRefreshing(false)
-            }, 500)
+            refetch()
           }, 1000)
         }
       )
@@ -166,16 +163,10 @@ const Dashboard = () => {
         (payload) => {
           console.log('Order updated:', payload.new)
           
-          // Only refetch if we're not in the middle of a status update
-          if (!isRefreshing) {
-            setTimeout(() => {
-              setIsRefreshing(true)
-              setTimeout(() => {
-                refetch()
-                setIsRefreshing(false)
-              }, 500)
-            }, 1000)
-          }
+          // Refetch orders after update
+          setTimeout(() => {
+            refetch()
+          }, 1000)
         }
       )
       .subscribe()
@@ -184,7 +175,7 @@ const Dashboard = () => {
       console.log('Cleaning up orders subscription...')
       supabase.removeChannel(ordersChannel)
     }
-  }, [user, refetch, isRefreshing])
+  }, [user, refetch]) // Removed isRefreshing from dependencies
 
   return (
     <div className="container mx-auto p-4">
