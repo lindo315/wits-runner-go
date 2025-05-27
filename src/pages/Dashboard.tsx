@@ -1,4 +1,5 @@
 
+
 import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
@@ -75,6 +76,7 @@ const Dashboard = () => {
     }
   })
 
+  // All hooks must be called before any early returns
   useEffect(() => {
     const fetchUser = async () => {
       const { data: { user } } = await supabase.auth.getUser()
@@ -83,46 +85,6 @@ const Dashboard = () => {
 
     fetchUser()
   }, [])
-
-  if (isLoading) {
-    return <div>Loading orders...</div>
-  }
-
-  if (isError) {
-    return <div>Error fetching orders: {error.message}</div>
-  }
-
-  const filteredOrders = selectedStatus
-    ? orders?.filter((order) => order.status === selectedStatus)
-    : orders
-
-  const handleStatusUpdate = async () => {
-    if (!selectedOrder || !newStatus) return
-
-    setIsRefreshing(true)
-    const { data, error } = await supabase
-      .from('orders')
-      .update({ status: newStatus })
-      .eq('id', selectedOrder.id)
-      .select()
-
-    if (error) {
-      toast({
-        title: "Error updating order status",
-        description: error.message,
-        variant: "destructive",
-      })
-    } else {
-      toast({
-        title: "Order status updated",
-        description: `Order ${selectedOrder.order_number} status updated to ${newStatus}.`,
-      })
-      refetch()
-    }
-
-    setIsDialogOpen(false)
-    setIsRefreshing(false)
-  }
 
   // Fixed useEffect - removed isRefreshing from dependencies to prevent infinite re-renders
   useEffect(() => {
@@ -176,6 +138,47 @@ const Dashboard = () => {
       supabase.removeChannel(ordersChannel)
     }
   }, [user, refetch]) // Removed isRefreshing from dependencies
+
+  // Early returns only after all hooks have been called
+  if (isLoading) {
+    return <div>Loading orders...</div>
+  }
+
+  if (isError) {
+    return <div>Error fetching orders: {error.message}</div>
+  }
+
+  const filteredOrders = selectedStatus
+    ? orders?.filter((order) => order.status === selectedStatus)
+    : orders
+
+  const handleStatusUpdate = async () => {
+    if (!selectedOrder || !newStatus) return
+
+    setIsRefreshing(true)
+    const { data, error } = await supabase
+      .from('orders')
+      .update({ status: newStatus })
+      .eq('id', selectedOrder.id)
+      .select()
+
+    if (error) {
+      toast({
+        title: "Error updating order status",
+        description: error.message,
+        variant: "destructive",
+      })
+    } else {
+      toast({
+        title: "Order status updated",
+        description: `Order ${selectedOrder.order_number} status updated to ${newStatus}.`,
+      })
+      refetch()
+    }
+
+    setIsDialogOpen(false)
+    setIsRefreshing(false)
+  }
 
   return (
     <div className="container mx-auto p-4">
@@ -273,3 +276,4 @@ const Dashboard = () => {
 }
 
 export default Dashboard
+
