@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
-import { useQuery } from 'react-query'
+import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
-import { Order } from '@/types'
 import { format } from 'date-fns'
 import {
   Table,
@@ -35,13 +34,24 @@ import {
 } from "@/components/ui/select"
 import { notifyRunnersOfNewOrder } from "@/services/orderNotifications"
 
+// Define Order type inline
+interface Order {
+  id: string
+  order_number: string
+  customer_id: string
+  total_amount: number
+  status: string
+  created_at: string
+}
+
 const Dashboard = () => {
+  // ... keep existing code (state variables and hooks)
   const [user, setUser] = useState(null)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [selectedStatus, setSelectedStatus] = useState('')
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [newStatus, setNewStatus] = useState('')
-  const [selectedOrder, setSelectedOrder] = useState(null)
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
   const { toast } = useToast()
 
   const {
@@ -50,16 +60,19 @@ const Dashboard = () => {
     isError,
     error,
     refetch,
-  } = useQuery('orders', async () => {
-    const { data, error } = await supabase
-      .from('orders')
-      .select('*')
-      .order('created_at', { ascending: false })
+  } = useQuery({
+    queryKey: ['orders'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('orders')
+        .select('*')
+        .order('created_at', { ascending: false })
 
-    if (error) {
-      throw new Error(error.message)
+      if (error) {
+        throw new Error(error.message)
+      }
+      return data as Order[]
     }
-    return data as Order[]
   })
 
   useEffect(() => {
