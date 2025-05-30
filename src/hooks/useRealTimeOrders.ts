@@ -60,6 +60,36 @@ export const useRealTimeOrders = ({ currentUser, activeTab, onNewOrder }: UseRea
     }
   }, []);
 
+  // Send SMS notification for new orders
+  const sendRunnerSMSNotification = useCallback(async (order: any) => {
+    try {
+      console.log('Sending SMS notification for new order:', order);
+
+      // Extract order items for SMS
+      const items = order.order_items?.map((item: any) => 
+        `${item.quantity}x ${item.menu_item?.name || 'Item'}`
+      ) || [];
+
+      // Call the SMS edge function
+      const { error: smsError } = await supabase.functions.invoke('send-runner-sms', {
+        body: {
+          orderNumber: order.order_number,
+          customerName: order.customer_addresses?.building_name || 'Customer',
+          items: items,
+          totalAmount: order.total_amount || 0
+        }
+      });
+
+      if (smsError) {
+        console.error('Error sending SMS notification:', smsError);
+      } else {
+        console.log('SMS notification sent successfully');
+      }
+    } catch (error) {
+      console.error('Failed to send SMS notification:', error);
+    }
+  }, []);
+
   // Fetch orders based on active tab
   const fetchOrders = useCallback(async () => {
     if (!currentUser) return;
@@ -157,7 +187,7 @@ export const useRealTimeOrders = ({ currentUser, activeTab, onNewOrder }: UseRea
           schema: 'public',
           table: 'orders'
         },
-        (payload) => {
+        async (payload) => {
           console.log('New order received via real-time:', payload);
           
           const newOrder = payload.new as any;
@@ -177,6 +207,9 @@ export const useRealTimeOrders = ({ currentUser, activeTab, onNewOrder }: UseRea
               description: `Order #${newOrder.order_number} - R${newOrder.total_amount?.toFixed(2)}`,
               duration: 5000,
             });
+
+            // Send SMS notification
+            await sendRunnerSMSNotification(newOrder);
             
             // Fetch complete order data
             setTimeout(() => {
@@ -235,7 +268,7 @@ export const useRealTimeOrders = ({ currentUser, activeTab, onNewOrder }: UseRea
       console.log('Cleaning up real-time subscription');
       supabase.removeChannel(channel);
     };
-  }, [currentUser, activeTab, fetchOrders, onNewOrder, playNewOrderSound, toast]);
+  }, [currentUser, activeTab, fetchOrders, onNewOrder, playNewOrderSound, toast, sendRunnerSMSNotification]);
 
   // Initial fetch when tab or user changes
   useEffect(() => {
