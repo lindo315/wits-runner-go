@@ -26,6 +26,9 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
+import { useRealTimeOrders } from "@/hooks/useRealTimeOrders";
+import { ConnectionStatusIndicator } from "@/components/ConnectionStatusIndicator";
+import { NewOrderBadge } from "@/components/NewOrderBadge";
 
 // Define the types based on the database schema and actual returned data
 interface Order {
@@ -83,16 +86,30 @@ const Dashboard = () => {
   
   const [isAvailable, setIsAvailable] = useState(true);
   const [activeTab, setActiveTab] = useState("available");
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [earnings, setEarnings] = useState<EarningsSummary>({
+  const [earnings, setEarnings] = useState({
     today: { count: 0, amount: 0 },
     weekly: { count: 0, amount: 0 },
     monthly: { count: 0, amount: 0 },
     total: { count: 0, amount: 0 }
   });
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [isUpdatingOrder, setIsUpdatingOrder] = useState(false);
+  
+  // Use the real-time orders hook
+  const { 
+    orders, 
+    isLoading, 
+    error, 
+    connectionStatus, 
+    newOrderIds, 
+    refetch: fetchOrders,
+    setOrders
+  } = useRealTimeOrders({ 
+    currentUser, 
+    activeTab,
+    onNewOrder: (order) => {
+      console.log('New order callback triggered:', order);
+    }
+  });
   
   // Status styling
   const statusLabels = {
@@ -243,10 +260,8 @@ const Dashboard = () => {
     if (!currentUser) return;
     
     try {
-      setIsLoading(true);
       console.log("Fetching earnings for runner ID:", currentUser.id);
       
-      // Directly fetch from runner_earnings table
       const { data: earningsData, error: earningsError } = await supabase
         .from("runner_earnings")
         .select("*")
@@ -306,8 +321,6 @@ const Dashboard = () => {
       setEarnings(summary);
     } catch (err) {
       console.error("Error calculating earnings:", err);
-    } finally {
-      setIsLoading(false);
     }
   };
   
@@ -632,7 +645,10 @@ const Dashboard = () => {
         <div className="rounded-lg border bg-white shadow-sm p-6">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-bold text-blue-600">Runner Dashboard</h1>
+              <div className="flex items-center gap-3 mb-2">
+                <h1 className="text-2xl font-bold text-blue-600">Runner Dashboard</h1>
+                <ConnectionStatusIndicator status={connectionStatus} />
+              </div>
               <p className="text-muted-foreground">
                 Manage your deliveries, track orders and earnings
               </p>
@@ -730,15 +746,19 @@ const Dashboard = () => {
           <CardHeader className="pb-0">
             <div className="flex justify-between items-center">
               <CardTitle>Order Management</CardTitle>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={handleManualRefresh}
-                className="flex items-center gap-2"
-              >
-                <RefreshCcw className="w-4 h-4" />
-                Refresh
-              </Button>
+              <div className="flex items-center gap-2">
+                <ConnectionStatusIndicator status={connectionStatus} className="text-xs" />
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleManualRefresh}
+                  className="flex items-center gap-2"
+                  disabled={isLoading}
+                >
+                  <RefreshCcw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+                  Refresh
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent className="pt-4">
@@ -748,6 +768,11 @@ const Dashboard = () => {
                   <div className="flex items-center gap-2">
                     <ShoppingBag className="h-4 w-4" />
                     <span>Available</span>
+                    {connectionStatus === 'online' && activeTab === 'available' && newOrderIds.size > 0 && (
+                      <Badge className="bg-red-500 text-white text-xs px-1 py-0 h-4 min-w-4 rounded-full">
+                        {newOrderIds.size}
+                      </Badge>
+                    )}
                   </div>
                 </TabsTrigger>
                 <TabsTrigger value="active" className="data-[state=active]:bg-purple-50 data-[state=active]:text-purple-700">
@@ -790,7 +815,9 @@ const Dashboard = () => {
                     <ShoppingBag className="h-12 w-12 text-gray-300 mx-auto mb-2" />
                     <p className="text-muted-foreground font-medium">No available orders at the moment</p>
                     <p className="text-sm text-muted-foreground mt-2">
-                      Check back soon for new delivery opportunities
+                      {connectionStatus === 'online' 
+                        ? "You'll be notified instantly when new orders arrive" 
+                        : "Check back soon for new delivery opportunities"}
                     </p>
                     <Button 
                       className="mt-4" 
@@ -803,13 +830,20 @@ const Dashboard = () => {
                 ) : (
                   <div className="space-y-4">
                     {orders.map(order => (
-                      <Card key={order.id} className="hover:border-blue-200 transition-colors">
+                      <Card 
+                        key={order.id} 
+                        className={`
+                          hover:border-blue-200 transition-all duration-300
+                          ${newOrderIds.has(order.id) ? 'ring-2 ring-blue-400 shadow-lg bg-blue-50' : ''}
+                        `}
+                      >
                         <CardContent className="p-0">
                           <div className="p-6">
                             <div className="flex flex-col md:flex-row justify-between">
                               <div>
                                 <div className="flex flex-wrap items-center gap-2 mb-2">
                                   <h3 className="font-semibold text-lg">Order #{order.order_number}</h3>
+                                  <NewOrderBadge isNew={newOrderIds.has(order.id)} />
                                   <Badge className={statusColors[order.status]}>
                                     {statusLabels[order.status]}
                                   </Badge>
@@ -817,6 +851,7 @@ const Dashboard = () => {
                                     {order.payment_status ? order.payment_status.charAt(0).toUpperCase() + order.payment_status.slice(1) : "Pending"}
                                   </Badge>
                                 </div>
+                                
                                 <div className="flex items-center gap-1 text-sm text-muted-foreground mb-4">
                                   <Clock className="h-3 w-3" />
                                   <span>{formatOrderDate(order.created_at)}</span>
