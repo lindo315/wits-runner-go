@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -101,7 +102,7 @@ const Dashboard = () => {
     error, 
     connectionStatus, 
     newOrderIds, 
-    refetch: fetchOrders,
+    refetch: refetchOrders,
     setOrders
   } = useRealTimeOrders({ 
     currentUser, 
@@ -139,120 +140,6 @@ const Dashboard = () => {
   // Helper to format dates
   const formatOrderDate = (dateString: string) => {
     return format(new Date(dateString), "MMM d, yyyy 'at' h:mm a");
-  };
-  
-  // Fetch orders based on active tab
-  const fetchOrders = async () => {
-    if (!currentUser || isUpdatingOrder) return;
-    
-    try {
-      setIsLoading(true);
-      setError(null);
-      
-      console.log("Fetching orders for tab:", activeTab);
-      console.log("Current user ID:", currentUser.id);
-      
-      // First, check if there are any orders in the table at all
-      const { count: totalOrdersCount, error: countError } = await supabase
-        .from("orders")
-        .select("*", { count: "exact", head: true });
-        
-      if (countError) {
-        console.error("Error counting total orders:", countError);
-      } else {
-        console.log("Total orders in database:", totalOrdersCount);
-      }
-      
-      let query = supabase
-        .from("orders")
-        .select(`
-          id,
-          order_number,
-          status,
-          payment_status,
-          payment_method,
-          runner_id,
-          merchant_id,
-          total_amount,
-          created_at,
-          delivered_at,
-          merchant:merchant_id (
-            name,
-            location
-          ),
-          customer_addresses:delivery_address_id (
-            building_name,
-            room_number,
-            delivery_instructions
-          ),
-          order_items (
-            id,
-            quantity,
-            special_requests,
-            menu_item:menu_item_id (
-              name
-            )
-          )
-        `);
-      
-      switch (activeTab) {
-        case "available":
-          // Updated to include both 'ready' and 'pending' status orders that are not assigned to runners
-          console.log("Querying available orders: status in [ready, pending], runner_id=null");
-          query = query
-            .in("status", ["ready", "pending"])
-            .is("runner_id", null);
-          break;
-        case "active":
-          query = query
-            .in("status", ["picked_up", "in_transit"])
-            .eq("runner_id", currentUser.id);
-          break;
-        case "completed":
-          query = query
-            .eq("status", "delivered")
-            .eq("runner_id", currentUser.id);
-          break;
-        default:
-          query = query.in("status", ["ready", "pending"]);
-      }
-      
-      const { data, error: fetchError } = await query.order("created_at", { ascending: false });
-      
-      if (fetchError) {
-        console.error("Query error:", fetchError);
-        setError(`Failed to load orders: ${fetchError.message || "Unknown error"}`);
-        throw fetchError;
-      }
-      
-      console.log("Orders fetched:", data);
-      console.log("Number of orders:", data?.length || 0);
-      
-      // Debugging any data issues
-      if (data && data.length > 0) {
-        console.log("Sample order data:", data[0]);
-      } else {
-        console.log("No orders found for the current query");
-        
-        // If no orders found, check if there are any "ready" or "pending" orders regardless of runner_id
-        if (activeTab === "available") {
-          const { data: availableOrders } = await supabase
-            .from("orders")
-            .select("id, status, runner_id")
-            .in("status", ["ready", "pending"]);
-            
-          console.log("All ready/pending orders:", availableOrders);
-        }
-      }
-      
-      // Type assertion to match the Order interface
-      setOrders(data as Order[]);
-    } catch (err: any) {
-      console.error("Error fetching orders:", err);
-      setError(`Failed to load orders: ${err.message || "Please try again later."}`);
-    } finally {
-      setIsLoading(false);
-    }
   };
   
   // Fetch earnings data
@@ -386,7 +273,6 @@ const Dashboard = () => {
     
     try {
       setIsUpdatingOrder(true);
-      setIsLoading(true);
       console.log("Marking order as in transit...");
       console.log("Order ID:", orderId);
       console.log("Current user ID:", currentUser.id);
@@ -439,7 +325,7 @@ const Dashboard = () => {
       
       // Short delay before refetching to ensure the state update is completed
       setTimeout(() => {
-        fetchOrders();
+        refetchOrders();
         setIsUpdatingOrder(false);
       }, 500);
     } catch (err) {
@@ -450,8 +336,6 @@ const Dashboard = () => {
         variant: "destructive"
       });
       setIsUpdatingOrder(false);
-    } finally {
-      setIsLoading(false);
     }
   };
   
@@ -460,7 +344,6 @@ const Dashboard = () => {
     
     try {
       setIsUpdatingOrder(true);
-      setIsLoading(true);
       const now = new Date().toISOString();
       
       // Update order status
@@ -539,7 +422,7 @@ const Dashboard = () => {
       setTimeout(() => {
         // Set active tab to completed since the order was delivered
         setActiveTab("completed");
-        fetchOrders();
+        refetchOrders();
         setIsUpdatingOrder(false);
       }, 500);
     } catch (err) {
@@ -550,8 +433,6 @@ const Dashboard = () => {
         variant: "destructive"
       });
       setIsUpdatingOrder(false);
-    } finally {
-      setIsLoading(false);
     }
   };
   
@@ -566,29 +447,9 @@ const Dashboard = () => {
     });
   };
   
-  // Set up real-time subscriptions
+  // Set up real-time subscriptions for earnings
   useEffect(() => {
     if (!currentUser) return;
-    
-    // Subscribe to orders changes
-    const ordersChannel = supabase
-      .channel('orders-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'orders'
-        },
-        (payload) => {
-          console.log('Real-time update received:', payload);
-          // Refresh orders when relevant changes are detected
-          if (!isUpdatingOrder) {
-            fetchOrders();
-          }
-        }
-      )
-      .subscribe();
     
     // Subscribe to earnings changes
     const earningsChannel = supabase
@@ -610,15 +471,9 @@ const Dashboard = () => {
       .subscribe();
     
     return () => {
-      supabase.removeChannel(ordersChannel);
       supabase.removeChannel(earningsChannel);
     };
-  }, [currentUser, isUpdatingOrder]);
-  
-  // Effect to fetch data when tab changes
-  useEffect(() => {
-    fetchOrders();
-  }, [activeTab, currentUser]);
+  }, [currentUser]);
   
   // Effect to fetch earnings data on mount
   useEffect(() => {
@@ -626,7 +481,7 @@ const Dashboard = () => {
   }, [currentUser]);
   
   const handleManualRefresh = () => {
-    fetchOrders();
+    refetchOrders();
     fetchEarnings();
     toast({
       title: "Refreshing data",
