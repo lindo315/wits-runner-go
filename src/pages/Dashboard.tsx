@@ -26,6 +26,8 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
+import NotificationSettings from "@/components/NotificationSettings";
+import { useOrderNotifications } from "@/hooks/useOrderNotifications";
 
 // Define the types based on the database schema and actual returned data
 interface Order {
@@ -80,6 +82,9 @@ const Dashboard = () => {
   const { currentUser } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  
+  // Add order notifications hook
+  useOrderNotifications();
   
   const [isAvailable, setIsAvailable] = useState(true);
   const [activeTab, setActiveTab] = useState("available");
@@ -724,6 +729,9 @@ const Dashboard = () => {
             </CardContent>
           </Card>
         </div>
+        
+        {/* Notification Settings */}
+        <NotificationSettings />
         
         {/* Orders Tabs */}
         <Card className="border-t-4 border-t-blue-500">
