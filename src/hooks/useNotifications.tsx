@@ -74,15 +74,6 @@ export const useNotifications = () => {
   }, [isSupported, updatePreferences, toast]);
 
   const sendTestNotification = useCallback(async () => {
-    if (preferences.permission !== 'granted') {
-      toast({
-        title: "Permission Required",
-        description: "Please enable notifications first",
-        variant: "destructive"
-      });
-      return;
-    }
-
     try {
       await notificationService.sendTestNotification();
       toast({
@@ -97,16 +88,11 @@ export const useNotifications = () => {
         variant: "destructive"
       });
     }
-  }, [preferences.permission, toast]);
+  }, [toast]);
 
-  const showOrderNotification = useCallback(async (orderNumber: string, customerName: string) => {
-    if (preferences.enabled && preferences.permission === 'granted') {
-      await notificationService.showNotification(
-        'New Order!',
-        `Order #${orderNumber} from ${customerName}`
-      );
-    }
-  }, [preferences]);
+  const showOrderNotification = useCallback(async (orderNumber: string, customerName: string, isUrgent: boolean = false) => {
+    await notificationService.showOrderNotification(orderNumber, customerName, isUrgent);
+  }, []);
 
   return {
     preferences,

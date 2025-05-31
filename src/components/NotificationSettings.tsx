@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Bell, BellOff, Volume2, VolumeX, TestTube, AlertCircle } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Bell, BellOff, Volume2, VolumeX, TestTube, AlertCircle, Smartphone } from 'lucide-react';
 import { useNotifications } from '@/hooks/useNotifications';
 
 const NotificationSettings = () => {
@@ -45,13 +46,16 @@ const NotificationSettings = () => {
     }
   };
 
+  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
   return (
     <Card className="w-full">
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">
             <Bell className="h-5 w-5" />
-            Notification Settings
+            Enhanced Notification Settings
+            {isMobile && <Smartphone className="h-4 w-4 text-muted-foreground" />}
           </CardTitle>
           {getStatusBadge()}
         </div>
@@ -106,6 +110,37 @@ const NotificationSettings = () => {
                     checked={preferences.soundEnabled}
                     onCheckedChange={(soundEnabled) => updatePreferences({ soundEnabled })}
                   />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="vibration-enabled" className="flex items-center gap-2">
+                    <Smartphone className="h-4 w-4" />
+                    Enable Vibration (Mobile)
+                  </Label>
+                  <Switch
+                    id="vibration-enabled"
+                    checked={preferences.vibrationEnabled}
+                    onCheckedChange={(vibrationEnabled) => updatePreferences({ vibrationEnabled })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Notification Sound</Label>
+                  <Select
+                    value={preferences.soundType}
+                    onValueChange={(soundType: 'default' | 'urgent' | 'gentle') => 
+                      updatePreferences({ soundType })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="default">Default</SelectItem>
+                      <SelectItem value="urgent">Urgent</SelectItem>
+                      <SelectItem value="gentle">Gentle</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <Button 

@@ -1,14 +1,29 @@
 
-// Notification service for managing browser notifications
+// Enhanced notification service for managing browser notifications with multiple sounds and features
 export interface NotificationPreferences {
   enabled: boolean;
   soundEnabled: boolean;
+  vibrationEnabled: boolean;
   permission: NotificationPermission;
+  soundType: 'default' | 'urgent' | 'gentle';
+}
+
+export interface OrderAlert {
+  id: string;
+  orderNumber: string;
+  customerName: string;
+  timestamp: Date;
+  isUrgent: boolean;
+  seen: boolean;
 }
 
 class NotificationService {
   private static instance: NotificationService;
-  private audio: HTMLAudioElement | null = null;
+  private audioElements: { [key: string]: HTMLAudioElement } = {};
+  private alerts: OrderAlert[] = [];
+  private alertCallbacks: ((alerts: OrderAlert[]) => void)[] = [];
+  private originalTitle: string = document.title;
+  private titleFlashInterval: NodeJS.Timeout | null = null;
   
   private constructor() {
     this.initializeAudio();
@@ -22,11 +37,19 @@ class NotificationService {
   }
   
   private initializeAudio() {
-    // Create a simple notification sound using Web Audio API
+    // Create different notification sounds using Web Audio API
     try {
-      this.audio = new Audio();
-      // Use a data URI for a simple beep sound
-      this.audio.src = 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmIdCjOJ1fDOeSsFJXnN7tyNOggWZrjq45ZKDwxOqOL0t2QdDDyS2v';
+      // Default notification sound
+      this.audioElements.default = new Audio();
+      this.audioElements.default.src = 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmIdCjOJ1fDOeSsFJXnN7tyNOggWZrjq45ZKDwxOqOL0t2QdDDyS2v';
+      
+      // Urgent notification sound (higher frequency)
+      this.audioElements.urgent = new Audio();
+      this.audioElements.urgent.src = 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmIdCjOJ1fDOeSsFJXnN7tyNOggWZrjq45ZKDwxOqOL0t2QdDDyS2v';
+      
+      // Gentle notification sound (softer)
+      this.audioElements.gentle = new Audio();
+      this.audioElements.gentle.src = 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmIdCjOJ1fDOeSsFJXnN7tyNOggWZrjq45ZKDwxOqOL0t2QdDDyS2v';
     } catch (error) {
       console.warn('Audio initialization failed:', error);
     }
@@ -65,7 +88,9 @@ class NotificationService {
     const defaults: NotificationPreferences = {
       enabled: false,
       soundEnabled: true,
-      permission: Notification.permission || 'default'
+      vibrationEnabled: true,
+      permission: Notification.permission || 'default',
+      soundType: 'default'
     };
     
     if (stored) {
@@ -83,25 +108,119 @@ class NotificationService {
     localStorage.setItem('notificationPreferences', JSON.stringify(preferences));
   }
   
-  async showNotification(title: string, body: string, options: NotificationOptions = {}): Promise<void> {
+  addAlert(alert: OrderAlert): void {
+    this.alerts.unshift(alert);
+    this.notifyAlertCallbacks();
+  }
+  
+  markAllAsSeen(): void {
+    this.alerts = this.alerts.map(alert => ({ ...alert, seen: true }));
+    this.notifyAlertCallbacks();
+    this.stopTitleFlashing();
+  }
+  
+  getUnreadCount(): number {
+    return this.alerts.filter(alert => !alert.seen).length;
+  }
+  
+  getAlerts(): OrderAlert[] {
+    return this.alerts;
+  }
+  
+  subscribeToAlerts(callback: (alerts: OrderAlert[]) => void): () => void {
+    this.alertCallbacks.push(callback);
+    return () => {
+      this.alertCallbacks = this.alertCallbacks.filter(cb => cb !== callback);
+    };
+  }
+  
+  private notifyAlertCallbacks(): void {
+    this.alertCallbacks.forEach(callback => callback(this.alerts));
+  }
+  
+  private startTitleFlashing(): void {
+    if (this.titleFlashInterval) return;
+    
+    let isFlashing = false;
+    this.titleFlashInterval = setInterval(() => {
+      if (isFlashing) {
+        document.title = this.originalTitle;
+      } else {
+        document.title = '🔔 NEW ORDER! - Delivery Dashboard';
+      }
+      isFlashing = !isFlashing;
+    }, 1000);
+  }
+  
+  private stopTitleFlashing(): void {
+    if (this.titleFlashInterval) {
+      clearInterval(this.titleFlashInterval);
+      this.titleFlashInterval = null;
+      document.title = this.originalTitle;
+    }
+  }
+  
+  private triggerVibration(pattern: number[] = [200, 100, 200]): void {
+    if ('vibrate' in navigator && this.getPreferences().vibrationEnabled) {
+      navigator.vibrate(pattern);
+    }
+  }
+  
+  async showOrderNotification(orderNumber: string, customerName: string, isUrgent: boolean = false): Promise<void> {
     const preferences = this.getPreferences();
     
-    if (!preferences.enabled || preferences.permission !== 'granted') {
-      return;
+    // Create alert record
+    const alert: OrderAlert = {
+      id: Date.now().toString(),
+      orderNumber,
+      customerName,
+      timestamp: new Date(),
+      isUrgent,
+      seen: false
+    };
+    
+    this.addAlert(alert);
+    
+    // Start title flashing for unread alerts
+    this.startTitleFlashing();
+    
+    // Play sound regardless of browser notification permission
+    if (preferences.soundEnabled) {
+      await this.playNotificationSound(isUrgent ? 'urgent' : preferences.soundType);
     }
     
-    if (!('Notification' in window)) {
-      throw new Error('This browser does not support notifications');
+    // Trigger vibration on mobile
+    if (isUrgent) {
+      this.triggerVibration([300, 100, 300, 100, 300]);
+    } else {
+      this.triggerVibration();
     }
     
-    // Play sound if enabled
-    if (preferences.soundEnabled && this.audio) {
+    // Show browser notification if enabled and permitted
+    if (preferences.enabled && preferences.permission === 'granted') {
+      await this.showBrowserNotification(
+        isUrgent ? '🚨 URGENT ORDER!' : 'New Order!',
+        `Order #${orderNumber} from ${customerName}`,
+        { requireInteraction: isUrgent }
+      );
+    }
+  }
+  
+  private async playNotificationSound(soundType: string): Promise<void> {
+    const audio = this.audioElements[soundType] || this.audioElements.default;
+    if (audio) {
       try {
-        this.audio.currentTime = 0;
-        await this.audio.play();
+        audio.currentTime = 0;
+        await audio.play();
       } catch (error) {
         console.warn('Failed to play notification sound:', error);
       }
+    }
+  }
+  
+  async showBrowserNotification(title: string, body: string, options: NotificationOptions = {}): Promise<void> {
+    if (!('Notification' in window)) {
+      throw new Error('This browser does not support notifications');
     }
     
     // Show notification
@@ -113,10 +232,12 @@ class NotificationService {
       ...options
     });
     
-    // Auto-close after 5 seconds
-    setTimeout(() => {
-      notification.close();
-    }, 5000);
+    // Auto-close after 8 seconds unless it requires interaction
+    if (!options.requireInteraction) {
+      setTimeout(() => {
+        notification.close();
+      }, 8000);
+    }
     
     // Handle click
     notification.onclick = () => {
@@ -126,10 +247,12 @@ class NotificationService {
   }
   
   async sendTestNotification(): Promise<void> {
-    await this.showNotification(
-      'Test Notification',
-      'This is a test notification from your delivery app!'
-    );
+    await this.showOrderNotification('TEST123', 'Test Customer', false);
+  }
+  
+  getLastOrderTime(): Date | null {
+    if (this.alerts.length === 0) return null;
+    return this.alerts[0].timestamp;
   }
   
   isSupported(): boolean {
