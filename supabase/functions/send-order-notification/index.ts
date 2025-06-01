@@ -74,7 +74,7 @@ const generateEmailTemplate = (orderData: OrderNotificationRequest): string => {
       <div style="max-width: 600px; margin: 0 auto; background-color: white; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
         <!-- Header -->
         <div style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: white; padding: 30px 20px; text-align: center;">
-          <h1 style="margin: 0; font-size: 28px; font-weight: bold;">🚀 New Order Alert!</h1>
+          <h1 style="margin: 0; font-size: 28px; font-weight: bold;">🍽️ New Nutrix Order!</h1>
           <p style="margin: 10px 0 0 0; font-size: 16px; opacity: 0.9;">Order #${orderData.orderNumber}</p>
           ${priorityBadge ? `<div style="margin-top: 10px;">${priorityBadge}</div>` : ''}
         </div>
@@ -151,7 +151,7 @@ const generateEmailTemplate = (orderData: OrderNotificationRequest): string => {
 
           <!-- Call to Action -->
           <div style="text-align: center; margin-bottom: 20px;">
-            <a href="${Deno.env.get('DASHBOARD_URL') || 'https://your-delivery-app.com/dashboard'}" 
+            <a href="${Deno.env.get('DASHBOARD_URL') || 'https://nutrix-runner-go.vercel.app/'}" 
                style="display: inline-block; background: linear-gradient(135deg, #059669 0%, #047857 100%); color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); transition: transform 0.2s;">
               🚚 View in Dashboard
             </a>
@@ -166,7 +166,7 @@ const generateEmailTemplate = (orderData: OrderNotificationRequest): string => {
         <!-- Footer -->
         <div style="background-color: #f8fafc; padding: 20px; text-align: center; border-top: 1px solid #e5e7eb;">
           <p style="margin: 0; color: #6b7280; font-size: 14px;">
-            © 2024 Delivery Service. This is an automated notification.
+            © 2024 Nutrix Eats. This is an automated notification.
           </p>
         </div>
       </div>
@@ -183,10 +183,10 @@ const sendOrderNotification = async (orderData: OrderNotificationRequest): Promi
       throw new Error("DELIVERY_TEAM_EMAIL environment variable not set");
     }
 
-    const subject = `New Order #${orderData.orderNumber} - ${orderData.customerName}${orderData.priority === 'urgent' ? ' [URGENT]' : ''}`;
+    const subject = `New Nutrix Order #${orderData.orderNumber} - ${orderData.customerName}${orderData.priority === 'urgent' ? ' [URGENT]' : ''}`;
     
     const emailResponse = await resend.emails.send({
-      from: "Delivery Service <orders@yourdomain.com>",
+      from: "Nutrix Eats <orders@nutrixeats.co.za>",
       to: [deliveryTeamEmail],
       subject,
       html: generateEmailTemplate(orderData),
