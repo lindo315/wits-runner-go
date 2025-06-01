@@ -19,10 +19,19 @@ export const OrderCreationHandler: React.FC<OrderCreationHandlerProps> = ({
     try {
       console.log('Creating order:', orderData);
 
+      // Generate order number
+      const orderNumber = `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
+
+      // Prepare order data with order number
+      const orderDataWithNumber = {
+        ...orderData,
+        order_number: orderNumber,
+      };
+
       // First, save the order to Supabase
       const { data: order, error: orderError } = await supabase
         .from('orders')
-        .insert(orderData)
+        .insert(orderDataWithNumber)
         .select(`
           *,
           order_items(*,
