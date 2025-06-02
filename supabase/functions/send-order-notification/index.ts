@@ -179,11 +179,21 @@ const sendOrderNotification = async (orderData: OrderNotificationRequest): Promi
   try {
     const deliveryTeamEmail = Deno.env.get("DELIVERY_TEAM_EMAIL");
     
+    console.log("=== EMAIL SENDING DEBUG ===");
+    console.log("RESEND_API_KEY exists:", !!Deno.env.get("RESEND_API_KEY"));
+    console.log("DELIVERY_TEAM_EMAIL:", deliveryTeamEmail);
+    console.log("Order data:", JSON.stringify(orderData, null, 2));
+    
     if (!deliveryTeamEmail) {
       throw new Error("DELIVERY_TEAM_EMAIL environment variable not set");
     }
 
     const subject = `New Nutrix Order #${orderData.orderNumber} - ${orderData.customerName}${orderData.priority === 'urgent' ? ' [URGENT]' : ''}`;
+    
+    console.log("Attempting to send email with:");
+    console.log("From: Nutrix Eats <support@nutrixeats.co.za>");
+    console.log("To:", deliveryTeamEmail);
+    console.log("Subject:", subject);
     
     const emailResponse = await resend.emails.send({
       from: "Nutrix Eats <support@nutrixeats.co.za>",
@@ -192,7 +202,17 @@ const sendOrderNotification = async (orderData: OrderNotificationRequest): Promi
       html: generateEmailTemplate(orderData),
     });
 
-    console.log("Email sent successfully:", emailResponse);
+    console.log("Resend API response:", JSON.stringify(emailResponse, null, 2));
+
+    if (emailResponse.error) {
+      console.error("Resend API error:", emailResponse.error);
+      return {
+        success: false,
+        error: emailResponse.error.message || "Email sending failed",
+      };
+    }
+
+    console.log("Email sent successfully with ID:", emailResponse.data?.id);
 
     return {
       success: true,
@@ -200,6 +220,11 @@ const sendOrderNotification = async (orderData: OrderNotificationRequest): Promi
     };
   } catch (error) {
     console.error("Error sending email:", error);
+    console.error("Error details:", {
+      name: error.name,
+      message: error.message,
+      stack: error.stack
+    });
     return {
       success: false,
       error: error.message,
