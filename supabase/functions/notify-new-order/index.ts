@@ -1,0 +1,219 @@
+
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { Resend } from "npm:resend@2.0.0";
+
+const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
+};
+
+interface NewOrderNotification {
+  order_id: string;
+  order_number: string;
+  customer_name: string;
+  total_amount: number;
+  created_at: string;
+}
+
+const formatCurrency = (amount: number): string => {
+  return new Intl.NumberFormat('en-ZA', {
+    style: 'currency',
+    currency: 'ZAR'
+  }).format(amount);
+};
+
+const formatTimestamp = (timestamp: string): string => {
+  return new Intl.DateTimeFormat('en-ZA', {
+    dateStyle: 'full',
+    timeStyle: 'short',
+    timeZone: 'Africa/Johannesburg'
+  }).format(new Date(timestamp));
+};
+
+const generateSimpleEmailTemplate = (orderData: NewOrderNotification): string => {
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>New Order Alert</title>
+    </head>
+    <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f3f4f6;">
+      <div style="max-width: 600px; margin: 0 auto; background-color: white; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+        <!-- Header -->
+        <div style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: white; padding: 30px 20px; text-align: center;">
+          <h1 style="margin: 0; font-size: 28px; font-weight: bold;">🔔 New Order Alert!</h1>
+          <p style="margin: 10px 0 0 0; font-size: 16px; opacity: 0.9;">A new order has been placed</p>
+        </div>
+
+        <!-- Order Info -->
+        <div style="padding: 30px 20px; text-align: center;">
+          <div style="background-color: #f8fafc; border-left: 4px solid #3b82f6; padding: 20px; margin-bottom: 30px; border-radius: 0 8px 8px 0;">
+            <h2 style="margin: 0 0 15px 0; color: #1f2937; font-size: 20px;">Order Details</h2>
+            <div style="font-size: 18px; margin-bottom: 10px;">
+              <strong>Order #${orderData.order_number}</strong>
+            </div>
+            <div style="font-size: 16px; margin-bottom: 10px;">
+              Customer: ${orderData.customer_name}
+            </div>
+            <div style="font-size: 16px; margin-bottom: 10px;">
+              Amount: <span style="color: #059669; font-weight: bold;">${formatCurrency(orderData.total_amount)}</span>
+            </div>
+            <div style="font-size: 14px; color: #6b7280;">
+              Placed at: ${formatTimestamp(orderData.created_at)}
+            </div>
+          </div>
+
+          <!-- Call to Action -->
+          <div style="margin-bottom: 20px;">
+            <a href="${Deno.env.get('DASHBOARD_URL') || 'https://nutrix-runner-go.vercel.app/'}" 
+               style="display: inline-block; background: linear-gradient(135deg, #059669 0%, #047857 100%); color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+              🚚 View Order Details
+            </a>
+          </div>
+
+          <div style="font-size: 14px; color: #6b7280;">
+            <p>Please check the dashboard for full order details and delivery information.</p>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div style="background-color: #f8fafc; padding: 20px; text-align: center; border-top: 1px solid #e5e7eb;">
+          <p style="margin: 0; color: #6b7280; font-size: 14px;">
+            © 2024 Nutrix Eats. This is an automated notification.
+          </p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+};
+
+const sendSimpleNotification = async (orderData: NewOrderNotification): Promise<{ success: boolean; messageId?: string; error?: string }> => {
+  try {
+    const deliveryTeamEmail = Deno.env.get("DELIVERY_TEAM_EMAIL");
+    
+    console.log("=== SIMPLE EMAIL NOTIFICATION DEBUG ===");
+    console.log("RESEND_API_KEY exists:", !!Deno.env.get("RESEND_API_KEY"));
+    console.log("DELIVERY_TEAM_EMAIL:", deliveryTeamEmail);
+    console.log("Order data:", JSON.stringify(orderData, null, 2));
+    
+    if (!deliveryTeamEmail) {
+      throw new Error("DELIVERY_TEAM_EMAIL environment variable not set");
+    }
+
+    const subject = `🔔 New Order Alert - #${orderData.order_number}`;
+    
+    console.log("Attempting to send simple notification email:");
+    console.log("From: Nutrix Eats <support@nutrixeats.co.za>");
+    console.log("To:", deliveryTeamEmail);
+    console.log("Subject:", subject);
+    
+    const emailResponse = await resend.emails.send({
+      from: "Nutrix Eats <support@nutrixeats.co.za>",
+      to: [deliveryTeamEmail],
+      subject,
+      html: generateSimpleEmailTemplate(orderData),
+    });
+
+    console.log("Resend API response:", JSON.stringify(emailResponse, null, 2));
+
+    if (emailResponse.error) {
+      console.error("Resend API error:", emailResponse.error);
+      return {
+        success: false,
+        error: emailResponse.error.message || "Email sending failed",
+      };
+    }
+
+    console.log("Simple notification email sent successfully with ID:", emailResponse.data?.id);
+
+    return {
+      success: true,
+      messageId: emailResponse.data?.id,
+    };
+  } catch (error) {
+    console.error("Error sending simple notification email:", error);
+    console.error("Error details:", {
+      name: error.name,
+      message: error.message,
+      stack: error.stack
+    });
+    return {
+      success: false,
+      error: error.message,
+    };
+  }
+};
+
+const handler = async (req: Request): Promise<Response> => {
+  // Handle CORS preflight requests
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    console.log("=== NEW ORDER NOTIFICATION TRIGGERED ===");
+    
+    const orderData: NewOrderNotification = await req.json();
+    console.log("Received order data:", JSON.stringify(orderData, null, 2));
+
+    // Validate required fields
+    if (!orderData.order_id || !orderData.order_number) {
+      console.error("Missing required order data");
+      return new Response(
+        JSON.stringify({ error: "Missing required order data" }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+
+    // Send simple notification email
+    const result = await sendSimpleNotification(orderData);
+
+    if (!result.success) {
+      console.error("Failed to send notification email:", result.error);
+      return new Response(
+        JSON.stringify({ 
+          error: "Failed to send notification email", 
+          details: result.error
+        }),
+        {
+          status: 500,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+
+    console.log("Notification email sent successfully!");
+    return new Response(
+      JSON.stringify({ 
+        success: true, 
+        messageId: result.messageId,
+        message: "New order notification sent successfully"
+      }),
+      {
+        status: 200,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      }
+    );
+
+  } catch (error: any) {
+    console.error("Error in notify-new-order function:", error);
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      {
+        status: 500,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      }
+    );
+  }
+};
+
+serve(handler);
