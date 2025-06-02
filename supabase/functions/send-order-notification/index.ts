@@ -186,7 +186,7 @@ const sendOrderNotification = async (orderData: OrderNotificationRequest): Promi
     const subject = `New Nutrix Order #${orderData.orderNumber} - ${orderData.customerName}${orderData.priority === 'urgent' ? ' [URGENT]' : ''}`;
     
     const emailResponse = await resend.emails.send({
-      from: "Nutrix Eats <orders@nutrixeats.co.za>",
+      from: "Nutrix Eats <support@nutrixeats.co.za>",
       to: [deliveryTeamEmail],
       subject,
       html: generateEmailTemplate(orderData),
