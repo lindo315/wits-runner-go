@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
@@ -9,6 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import { ChevronLeft, ShoppingBag, MapPin, User, Phone, CreditCard } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
+import { CancelOrderDialog } from "@/components/CancelOrderDialog";
 
 const OrderDetails = () => {
   const { id } = useParams<{ id: string }>();
@@ -28,7 +30,8 @@ const OrderDetails = () => {
     ready: "Ready",
     picked_up: "Picked Up",
     in_transit: "In Transit",
-    delivered: "Delivered"
+    delivered: "Delivered",
+    cancelled: "Cancelled"
   };
   
   const statusColors = {
@@ -36,7 +39,8 @@ const OrderDetails = () => {
     ready: "bg-amber-100 text-amber-800",
     picked_up: "bg-blue-100 text-blue-800",
     in_transit: "bg-purple-100 text-purple-800",
-    delivered: "bg-green-100 text-green-800"
+    delivered: "bg-green-100 text-green-800",
+    cancelled: "bg-red-100 text-red-800"
   };
 
   // Payment status styling
@@ -316,6 +320,88 @@ const OrderDetails = () => {
       setIsUpdating(false);
     }
   };
+
+  const handleCancelOrder = async (reason: string) => {
+    if (!currentUser || !order) return;
+    
+    try {
+      setIsUpdating(true);
+      const now = new Date().toISOString();
+      
+      console.log("Cancelling order:", order.id);
+      console.log("Cancellation reason:", reason);
+      
+      // Update order status to cancelled
+      const { error: updateError } = await supabase
+        .from("orders")
+        .update({
+          status: "cancelled",
+          cancelled_at: now,
+          cancellation_reason: reason
+        })
+        .eq("id", order.id);
+      
+      if (updateError) {
+        console.error("Error updating order status:", updateError);
+        throw updateError;
+      }
+      
+      // Add to order status history
+      const { error: historyError } = await supabase
+        .from("order_status_history")
+        .insert({
+          order_id: order.id,
+          status: "cancelled",
+          changed_by: currentUser.id,
+          notes: `Order cancelled by runner. Reason: ${reason}`
+        });
+      
+      if (historyError) {
+        console.error("Error updating order history:", historyError);
+      }
+      
+      // Process wallet refund if payment was successful
+      if (order.payment_status === 'paid' && order.customer_id) {
+        console.log("Processing wallet refund for customer:", order.customer_id);
+        
+        const { error: refundError } = await supabase.rpc('refund_wallet_credits', {
+          p_user_id: order.customer_id,
+          p_amount: order.total_amount,
+          p_description: `Refund for cancelled order #${order.order_number}`,
+          p_reference_id: order.id
+        });
+        
+        if (refundError) {
+          console.error("Error processing wallet refund:", refundError);
+        } else {
+          console.log("Wallet refund processed successfully");
+        }
+      }
+      
+      // Update local state
+      setOrder({
+        ...order,
+        status: "cancelled",
+        cancelled_at: now,
+        cancellation_reason: reason
+      });
+      
+      toast({
+        title: "Order cancelled",
+        description: "Order has been cancelled and customer has been refunded"
+      });
+      
+    } catch (err: any) {
+      console.error("Error cancelling order:", err);
+      toast({
+        title: "Cancellation failed",
+        description: "Could not cancel order. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
   
   if (loading) {
     return (
@@ -382,16 +468,24 @@ const OrderDetails = () => {
               <p className="text-muted-foreground">
                 Placed on {formatOrderDate(order.created_at)}
               </p>
+              {order.cancelled_at && (
+                <p className="text-red-600 text-sm mt-1">
+                  Cancelled on {formatOrderDate(order.cancelled_at)}
+                  {order.cancellation_reason && (
+                    <span className="block">Reason: {order.cancellation_reason}</span>
+                  )}
+                </p>
+              )}
             </div>
             
-            <div className="mt-4 md:mt-0">
+            <div className="mt-4 md:mt-0 flex gap-2">
               {!order.runner_id && order.status === "ready" && (
                 <Button onClick={handleAcceptOrder} disabled={isUpdating}>
                   {isUpdating ? "Processing..." : "Accept Order"}
                 </Button>
               )}
               
-              {order.runner_id && order.runner_id === currentUser?.id && (
+              {order.runner_id && order.runner_id === currentUser?.id && order.status !== "cancelled" && order.status !== "delivered" && (
                 <>
                   {order.status === "picked_up" && (
                     <Button onClick={handleMarkInTransit} disabled={isUpdating}>
@@ -403,6 +497,13 @@ const OrderDetails = () => {
                     <Button onClick={handleMarkDelivered} disabled={isUpdating} className="bg-green-600 hover:bg-green-700">
                       {isUpdating ? "Processing..." : "Mark Delivered"}
                     </Button>
+                  )}
+                  
+                  {(order.status === "picked_up" || order.status === "in_transit") && (
+                    <CancelOrderDialog 
+                      onCancel={handleCancelOrder}
+                      isLoading={isUpdating}
+                    />
                   )}
                 </>
               )}
@@ -417,6 +518,7 @@ const OrderDetails = () => {
             <div className={`bg-muted/50 rounded-md p-4 ${
               order.payment_status === 'paid' ? 'border-l-4 border-green-500' : 
               order.payment_status === 'failed' ? 'border-l-4 border-red-500' : 
+              order.payment_status === 'refunded' ? 'border-l-4 border-blue-500' :
               'border-l-4 border-yellow-500'
             }`}>
               <div className="flex items-start space-x-3">
@@ -430,6 +532,7 @@ const OrderDetails = () => {
                       <span className={
                         order.payment_status === 'paid' ? 'text-green-600 font-medium' : 
                         order.payment_status === 'failed' ? 'text-red-600 font-medium' : 
+                        order.payment_status === 'refunded' ? 'text-blue-600 font-medium' :
                         'text-yellow-600 font-medium'
                       }>
                         {order.payment_status.charAt(0).toUpperCase() + order.payment_status.slice(1)}
@@ -440,9 +543,15 @@ const OrderDetails = () => {
                     <strong>Amount:</strong> R{(order.total_amount || 0).toFixed(2)}
                   </p>
                   
-                  {order.payment_method === "cash" && (
+                  {order.payment_method === "cash" && order.status !== "cancelled" && (
                     <div className="mt-2 p-3 bg-yellow-50 border border-yellow-100 rounded-md text-sm text-yellow-800">
                       <strong>Important:</strong> Remember to collect R{(order.total_amount || 0).toFixed(2)} in cash from the customer.
+                    </div>
+                  )}
+
+                  {order.status === "cancelled" && order.payment_status === 'paid' && (
+                    <div className="mt-2 p-3 bg-blue-50 border border-blue-100 rounded-md text-sm text-blue-800">
+                      <strong>Refunded:</strong> Customer has been automatically refunded to their wallet.
                     </div>
                   )}
                 </div>
@@ -520,7 +629,7 @@ const OrderDetails = () => {
                 </div>
               </div>
               
-              {customerInfo && (
+              {customerInfo && order.status !== "cancelled" && (
                 <div className="flex items-start space-x-3">
                   <User className="h-5 w-5 mt-1 flex-shrink-0" />
                   <div className="space-y-1">

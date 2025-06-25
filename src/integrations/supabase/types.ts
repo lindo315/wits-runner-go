@@ -218,6 +218,8 @@ export type Database = {
           image_url: string | null
           ingredients: string[] | null
           is_available: boolean | null
+          item_size: string | null
+          item_sizePrice: number | null
           merchant_id: string | null
           name: string | null
           preparation_time_minutes: number | null
@@ -234,6 +236,8 @@ export type Database = {
           image_url?: string | null
           ingredients?: string[] | null
           is_available?: boolean | null
+          item_size?: string | null
+          item_sizePrice?: number | null
           merchant_id?: string | null
           name?: string | null
           preparation_time_minutes?: number | null
@@ -250,6 +254,8 @@ export type Database = {
           image_url?: string | null
           ingredients?: string[] | null
           is_available?: boolean | null
+          item_size?: string | null
+          item_sizePrice?: number | null
           merchant_id?: string | null
           name?: string | null
           preparation_time_minutes?: number | null
@@ -940,6 +946,7 @@ export type Database = {
         Row: {
           created_at: string | null
           email: string
+          first_order_discount_used: boolean | null
           free_delivery_used: boolean | null
           full_name: string
           id: string
@@ -952,6 +959,7 @@ export type Database = {
         Insert: {
           created_at?: string | null
           email: string
+          first_order_discount_used?: boolean | null
           free_delivery_used?: boolean | null
           full_name: string
           id?: string
@@ -964,6 +972,7 @@ export type Database = {
         Update: {
           created_at?: string | null
           email?: string
+          first_order_discount_used?: boolean | null
           free_delivery_used?: boolean | null
           full_name?: string
           id?: string
@@ -975,13 +984,105 @@ export type Database = {
         }
         Relationships: []
       }
+      wallet_transactions: {
+        Row: {
+          amount: number
+          created_at: string
+          description: string | null
+          id: string
+          reference_id: string | null
+          reference_type: string | null
+          transaction_type: string
+          user_id: string
+          wallet_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          reference_id?: string | null
+          reference_type?: string | null
+          transaction_type: string
+          user_id: string
+          wallet_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          reference_id?: string | null
+          reference_type?: string | null
+          transaction_type?: string
+          user_id?: string
+          wallet_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wallet_transactions_wallet_id_fkey"
+            columns: ["wallet_id"]
+            isOneToOne: false
+            referencedRelation: "wallets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wallets: {
+        Row: {
+          balance: number
+          created_at: string
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          balance?: number
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          balance?: number
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      add_wallet_credits: {
+        Args: {
+          p_user_id: string
+          p_amount: number
+          p_description?: string
+          p_reference_type?: string
+          p_reference_id?: string
+        }
+        Returns: boolean
+      }
+      deduct_wallet_credits: {
+        Args: {
+          p_user_id: string
+          p_amount: number
+          p_description?: string
+          p_reference_type?: string
+          p_reference_id?: string
+        }
+        Returns: boolean
+      }
       get_auth_user_id: {
         Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      get_or_create_wallet: {
+        Args: { p_user_id: string }
         Returns: string
       }
       get_user_profile: {
@@ -1001,6 +1102,19 @@ export type Database = {
       }
       is_first_order: {
         Args: { user_id: string }
+        Returns: boolean
+      }
+      is_first_order_with_discount: {
+        Args: { user_id: string }
+        Returns: boolean
+      }
+      refund_wallet_credits: {
+        Args: {
+          p_user_id: string
+          p_amount: number
+          p_description?: string
+          p_reference_id?: string
+        }
         Returns: boolean
       }
     }
