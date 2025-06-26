@@ -670,6 +670,42 @@ export type Database = {
           },
         ]
       }
+      promotional_campaigns: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          discount_amount: number
+          end_date: string | null
+          id: string
+          is_active: boolean | null
+          max_orders: number
+          name: string
+          start_date: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          discount_amount: number
+          end_date?: string | null
+          id?: string
+          is_active?: boolean | null
+          max_orders: number
+          name: string
+          start_date?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          discount_amount?: number
+          end_date?: string | null
+          id?: string
+          is_active?: boolean | null
+          max_orders?: number
+          name?: string
+          start_date?: string | null
+        }
+        Relationships: []
+      }
       push_notifications: {
         Row: {
           body: string
@@ -951,6 +987,7 @@ export type Database = {
           full_name: string
           id: string
           phone_number: string | null
+          promotional_discounts_used: number | null
           role: string
           student_number: string | null
           updated_at: string | null
@@ -964,6 +1001,7 @@ export type Database = {
           full_name: string
           id?: string
           phone_number?: string | null
+          promotional_discounts_used?: number | null
           role: string
           student_number?: string | null
           updated_at?: string | null
@@ -977,6 +1015,7 @@ export type Database = {
           full_name?: string
           id?: string
           phone_number?: string | null
+          promotional_discounts_used?: number | null
           role?: string
           student_number?: string | null
           updated_at?: string | null
@@ -1099,6 +1138,14 @@ export type Database = {
           created_at: string
           updated_at: string
         }[]
+      }
+      increment_promotional_discounts: {
+        Args: { user_id: string }
+        Returns: boolean
+      }
+      is_eligible_for_promotional_discount: {
+        Args: { user_id: string }
+        Returns: boolean
       }
       is_first_order: {
         Args: { user_id: string }
