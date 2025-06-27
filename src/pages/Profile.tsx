@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -26,24 +25,90 @@ const Profile = () => {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [runnerProfile, setRunnerProfile] = useState<any>(null);
+  const [runnerStats, setRunnerStats] = useState({
+    totalDeliveries: 0,
+    totalEarnings: 0,
+    rating: 0,
+    completedOrders: 0,
+    averageRating: 0
+  });
   const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch runner profile data
+  // Fetch runner profile and statistics
   useEffect(() => {
-    const fetchRunnerProfile = async () => {
+    const fetchRunnerData = async () => {
       if (!currentUser?.id) return;
 
       try {
-        const { data: profile, error } = await supabase
+        // Fetch runner profile
+        const { data: profile, error: profileError } = await supabase
           .from('runner_profiles')
           .select('*')
           .eq('user_id', currentUser.id)
           .single();
 
-        if (error) {
-          console.error('Error fetching runner profile:', error);
+        if (profileError) {
+          console.error('Error fetching runner profile:', profileError);
         } else {
           setRunnerProfile(profile);
+        }
+
+        // Fetch total deliveries and calculate stats from orders
+        const { data: orders, error: ordersError } = await supabase
+          .from('orders')
+          .select('id, status, total_amount, created_at')
+          .eq('runner_id', currentUser.id);
+
+        if (ordersError) {
+          console.error('Error fetching orders:', ordersError);
+        } else {
+          const completedOrders = orders?.filter(order => order.status === 'delivered') || [];
+          
+          setRunnerStats(prev => ({
+            ...prev,
+            totalDeliveries: completedOrders.length,
+            completedOrders: completedOrders.length
+          }));
+        }
+
+        // Fetch total earnings from runner_earnings table
+        const { data: earnings, error: earningsError } = await supabase
+          .from('runner_earnings')
+          .select('total_earned')
+          .eq('runner_id', currentUser.id);
+
+        if (earningsError) {
+          console.error('Error fetching earnings:', earningsError);
+        } else {
+          const totalEarnings = earnings?.reduce((sum, earning) => sum + (earning.total_earned || 0), 0) || 0;
+          setRunnerStats(prev => ({
+            ...prev,
+            totalEarnings: totalEarnings
+          }));
+        }
+
+        // Fetch average rating from order reviews
+        const { data: reviews, error: reviewsError } = await supabase
+          .from('order_reviews')
+          .select('runner_rating')
+          .eq('runner_id', currentUser.id)
+          .not('runner_rating', 'is', null);
+
+        if (reviewsError) {
+          console.error('Error fetching reviews:', reviewsError);
+        } else {
+          if (reviews && reviews.length > 0) {
+            const validRatings = reviews.filter(review => review.runner_rating !== null);
+            const averageRating = validRatings.length > 0 
+              ? validRatings.reduce((sum, review) => sum + review.runner_rating, 0) / validRatings.length
+              : 0;
+            
+            setRunnerStats(prev => ({
+              ...prev,
+              rating: averageRating,
+              averageRating: averageRating
+            }));
+          }
         }
 
         // Set form data from current user
@@ -52,13 +117,13 @@ const Profile = () => {
         setPhoneNumber(currentUser.phone_number || "");
         setStudentNumber(currentUser.student_number || "");
       } catch (error) {
-        console.error('Error:', error);
+        console.error('Error fetching runner data:', error);
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchRunnerProfile();
+    fetchRunnerData();
   }, [currentUser]);
   
   // Form submission handlers
@@ -153,11 +218,11 @@ const Profile = () => {
                   <div className="flex items-center gap-4">
                     <Badge className="bg-green-500/20 text-green-100 border-green-400/30">
                       <div className="w-2 h-2 bg-green-400 rounded-full mr-2"></div>
-                      Active Runner
+                      {runnerProfile?.application_status === 'approved' ? 'Active Runner' : 'Pending Approval'}
                     </Badge>
                     <div className="flex items-center gap-1 text-sm text-blue-100">
                       <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                      <span className="font-medium">{runnerProfile?.rating?.toFixed(1) || '0.0'}</span>
+                      <span className="font-medium">{runnerStats.rating.toFixed(1)}</span>
                     </div>
                   </div>
                 </div>
@@ -343,11 +408,11 @@ const Profile = () => {
               <CardContent className="space-y-6">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="text-center p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl">
-                    <div className="text-2xl font-bold text-blue-700">{runnerProfile?.total_deliveries || 0}</div>
+                    <div className="text-2xl font-bold text-blue-700">{runnerStats.totalDeliveries}</div>
                     <div className="text-sm text-blue-600 font-medium">Total Deliveries</div>
                   </div>
                   <div className="text-center p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-xl">
-                    <div className="text-2xl font-bold text-green-700">R{runnerProfile?.total_earnings?.toFixed(2) || '0.00'}</div>
+                    <div className="text-2xl font-bold text-green-700">R{runnerStats.totalEarnings.toFixed(2)}</div>
                     <div className="text-sm text-green-600 font-medium">Total Earned</div>
                   </div>
                 </div>
@@ -359,7 +424,7 @@ const Profile = () => {
                       <span className="text-sm font-medium text-yellow-800">Rating</span>
                     </div>
                     <div className="flex items-center gap-1">
-                      <span className="text-lg font-bold text-yellow-700">{runnerProfile?.rating?.toFixed(1) || '0.0'}</span>
+                      <span className="text-lg font-bold text-yellow-700">{runnerStats.rating.toFixed(1)}</span>
                       <span className="text-sm text-yellow-600">/ 5.0</span>
                     </div>
                   </div>
@@ -379,8 +444,8 @@ const Profile = () => {
                       <div className="w-4 h-4 bg-indigo-600 rounded-full"></div>
                       <span className="text-sm font-medium text-indigo-800">Status</span>
                     </div>
-                    <Badge className="bg-green-100 text-green-800 border-green-200">
-                      {runnerProfile?.application_status || 'Active'}
+                    <Badge className={runnerProfile?.application_status === 'approved' ? "bg-green-100 text-green-800 border-green-200" : "bg-yellow-100 text-yellow-800 border-yellow-200"}>
+                      {runnerProfile?.application_status === 'approved' ? 'Active' : 'Pending'}
                     </Badge>
                   </div>
                 </div>
