@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,7 +13,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 
 const Dashboard = () => {
-  const { user, signOut } = useAuth();
+  const { currentUser, logout } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("available");
@@ -20,7 +21,19 @@ const Dashboard = () => {
   const fetchOrders = async () => {
     const { data, error } = await supabase
       .from("orders")
-      .select("*")
+      .select(`
+        *,
+        customer_addresses!delivery_address_id (
+          full_address
+        ),
+        order_items (
+          id,
+          quantity,
+          menu_items (
+            name
+          )
+        )
+      `)
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -42,7 +55,7 @@ const Dashboard = () => {
 
   const handleSignOut = async () => {
     try {
-      await signOut();
+      await logout();
       toast({ title: "Signed out successfully" });
       navigate("/login");
     } catch (error) {
@@ -59,7 +72,7 @@ const Dashboard = () => {
     try {
       const { data, error } = await supabase
         .from("orders")
-        .update({ runner_id: user?.id, status: 'accepted' })
+        .update({ runner_id: currentUser?.id, status: 'accepted' })
         .eq("id", orderId)
         .select();
   
@@ -126,7 +139,7 @@ const Dashboard = () => {
             <div>
               <h1 className="text-lg sm:text-xl font-bold text-gray-900">Nutrix Runner</h1>
               <p className="text-xs sm:text-sm text-gray-500 truncate max-w-[200px]">
-                {user?.email}
+                {currentUser?.email}
               </p>
             </div>
           </div>
@@ -217,10 +230,10 @@ const Dashboard = () => {
                   Available ({orders?.filter(o => ['ready', 'pending'].includes(o.status) && !o.runner_id).length || 0})
                 </TabsTrigger>
                 <TabsTrigger value="active" className="text-xs sm:text-sm">
-                  Active ({orders?.filter(o => o.runner_id === user?.id && ['accepted', 'picked_up'].includes(o.status)).length || 0})
+                  Active ({orders?.filter(o => o.runner_id === currentUser?.id && ['accepted', 'picked_up'].includes(o.status)).length || 0})
                 </TabsTrigger>
                 <TabsTrigger value="completed" className="text-xs sm:text-sm">
-                  Completed ({orders?.filter(o => o.runner_id === user?.id && o.status === 'delivered').length || 0})
+                  Completed ({orders?.filter(o => o.runner_id === currentUser?.id && o.status === 'delivered').length || 0})
                 </TabsTrigger>
               </TabsList>
 
@@ -252,7 +265,7 @@ const Dashboard = () => {
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
                                   <div className="flex items-center text-gray-600">
                                     <MapPin className="h-4 w-4 mr-2 flex-shrink-0" />
-                                    <span className="truncate">{order.delivery_address}</span>
+                                    <span className="truncate">{order.customer_addresses?.full_address || 'Address not available'}</span>
                                   </div>
                                   <div className="flex items-center text-gray-600">
                                     <Clock className="h-4 w-4 mr-2 flex-shrink-0" />
@@ -264,7 +277,7 @@ const Dashboard = () => {
                                   </div>
                                   <div className="flex items-center text-gray-600">
                                     <Package className="h-4 w-4 mr-2 flex-shrink-0" />
-                                    <span>{order.items?.length || 0} items</span>
+                                    <span>{order.order_items?.length || 0} items</span>
                                   </div>
                                 </div>
                               </div>
@@ -297,7 +310,7 @@ const Dashboard = () => {
               </TabsContent>
 
               <TabsContent value="active" className="space-y-4">
-                {orders?.filter(order => order.runner_id === user?.id && ['accepted', 'picked_up'].includes(order.status)).length === 0 ? (
+                {orders?.filter(order => order.runner_id === currentUser?.id && ['accepted', 'picked_up'].includes(order.status)).length === 0 ? (
                   <div className="text-center py-8 sm:py-12">
                     <Clock className="h-12 w-12 sm:h-16 sm:w-16 text-gray-400 mx-auto mb-4" />
                     <h3 className="text-lg font-medium text-gray-900 mb-2">No active orders</h3>
@@ -306,11 +319,10 @@ const Dashboard = () => {
                 ) : (
                   <div className="space-y-4">
                     {orders
-                      ?.filter(order => order.runner_id === user?.id && ['accepted', 'picked_up'].includes(order.status))
+                      ?.filter(order => order.runner_id === currentUser?.id && ['accepted', 'picked_up'].includes(order.status))
                       .map((order) => (
                         <Card key={order.id} className="border-l-4 border-l-green-500">
                           <CardContent className="p-4">
-                            {/* Similar structure to available orders but with different actions */}
                             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between space-y-3 sm:space-y-0">
                               <div className="flex-1 space-y-2">
                                 <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-4 space-y-2 sm:space-y-0">
@@ -325,7 +337,7 @@ const Dashboard = () => {
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
                                   <div className="flex items-center text-gray-600">
                                     <MapPin className="h-4 w-4 mr-2 flex-shrink-0" />
-                                    <span className="truncate">{order.delivery_address}</span>
+                                    <span className="truncate">{order.customer_addresses?.full_address || 'Address not available'}</span>
                                   </div>
                                   <div className="flex items-center text-gray-600">
                                     <Clock className="h-4 w-4 mr-2 flex-shrink-0" />
@@ -337,7 +349,7 @@ const Dashboard = () => {
                                   </div>
                                   <div className="flex items-center text-gray-600">
                                     <Package className="h-4 w-4 mr-2 flex-shrink-0" />
-                                    <span>{order.items?.length || 0} items</span>
+                                    <span>{order.order_items?.length || 0} items</span>
                                   </div>
                                 </div>
                               </div>
@@ -361,7 +373,7 @@ const Dashboard = () => {
               </TabsContent>
 
               <TabsContent value="completed" className="space-y-4">
-                {orders?.filter(order => order.runner_id === user?.id && order.status === 'delivered').length === 0 ? (
+                {orders?.filter(order => order.runner_id === currentUser?.id && order.status === 'delivered').length === 0 ? (
                   <div className="text-center py-8 sm:py-12">
                     <Package className="h-12 w-12 sm:h-16 sm:w-16 text-gray-400 mx-auto mb-4" />
                     <h3 className="text-lg font-medium text-gray-900 mb-2">No completed orders</h3>
@@ -370,7 +382,7 @@ const Dashboard = () => {
                 ) : (
                   <div className="space-y-4">
                     {orders
-                      ?.filter(order => order.runner_id === user?.id && order.status === 'delivered')
+                      ?.filter(order => order.runner_id === currentUser?.id && order.status === 'delivered')
                       .map((order) => (
                         <Card key={order.id} className="border-l-4 border-l-gray-500">
                           <CardContent className="p-4">
@@ -388,7 +400,7 @@ const Dashboard = () => {
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
                                   <div className="flex items-center text-gray-600">
                                     <MapPin className="h-4 w-4 mr-2 flex-shrink-0" />
-                                    <span className="truncate">{order.delivery_address}</span>
+                                    <span className="truncate">{order.customer_addresses?.full_address || 'Address not available'}</span>
                                   </div>
                                   <div className="flex items-center text-gray-600">
                                     <Clock className="h-4 w-4 mr-2 flex-shrink-0" />
@@ -400,7 +412,7 @@ const Dashboard = () => {
                                   </div>
                                   <div className="flex items-center text-gray-600">
                                     <Package className="h-4 w-4 mr-2 flex-shrink-0" />
-                                    <span>{order.items?.length || 0} items</span>
+                                    <span>{order.order_items?.length || 0} items</span>
                                   </div>
                                 </div>
                               </div>
