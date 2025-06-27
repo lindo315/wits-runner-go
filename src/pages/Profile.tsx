@@ -195,7 +195,7 @@ const Profile = () => {
 
   if (isLoading) {
     return (
-      <div className="container py-8 animate-fade-in">
+      <div className="container py-4 px-4 animate-fade-in">
         <div className="flex justify-center items-center min-h-[400px]">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
         </div>
@@ -205,11 +205,11 @@ const Profile = () => {
   
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
-      <div className="container py-8 animate-fade-in">
-        <div className="flex items-center justify-between mb-6">
+      <div className="container py-4 px-4 sm:py-8 sm:px-6 animate-fade-in">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 sm:mb-6 gap-3">
           <Button
             variant="ghost"
-            className="pl-0 flex items-center gap-2 hover:bg-white/50 transition-colors"
+            className="pl-0 flex items-center gap-2 hover:bg-white/50 transition-colors self-start"
             onClick={() => navigate("/dashboard")}
           >
             <ChevronLeft className="h-4 w-4" />
@@ -220,29 +220,30 @@ const Profile = () => {
             variant="outline"
             onClick={handleRefresh}
             disabled={isRefreshing}
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 self-start sm:self-auto"
           >
             <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-            Refresh Data
+            <span className="hidden sm:inline">Refresh Data</span>
+            <span className="sm:hidden">Refresh</span>
           </Button>
         </div>
         
         {/* Header Section */}
-        <div className="mb-8">
+        <div className="mb-6 sm:mb-8">
           <Card className="border-0 bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-xl">
-            <CardContent className="p-8">
-              <div className="flex items-center gap-6">
-                <Avatar className="h-20 w-20 border-4 border-white/20">
-                  <AvatarFallback className="bg-white/10 text-white text-xl font-bold">
+            <CardContent className="p-4 sm:p-6 lg:p-8">
+              <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
+                <Avatar className="h-16 w-16 sm:h-20 sm:w-20 border-4 border-white/20">
+                  <AvatarFallback className="bg-white/10 text-white text-lg sm:text-xl font-bold">
                     {getInitials(firstName, lastName)}
                   </AvatarFallback>
                 </Avatar>
-                <div className="flex-1">
-                  <h1 className="text-3xl font-bold mb-2">
+                <div className="flex-1 text-center sm:text-left">
+                  <h1 className="text-2xl sm:text-3xl font-bold mb-2">
                     {firstName} {lastName}
                   </h1>
                   <p className="text-blue-100 mb-3">Campus Eats Runner</p>
-                  <div className="flex items-center gap-4">
+                  <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4">
                     <Badge className="bg-green-500/20 text-green-100 border-green-400/30">
                       <div className="w-2 h-2 bg-green-400 rounded-full mr-2"></div>
                       {runnerProfile?.application_status === 'approved' ? 'Active Runner' : 'Pending Approval'}
@@ -258,7 +259,7 @@ const Profile = () => {
           </Card>
         </div>
         
-        <div className="flex flex-col lg:flex-row gap-8">
+        <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
           <div className="w-full lg:w-2/3 space-y-6">
             {/* Personal Information */}
             <Card className="shadow-lg border-0 bg-white/70 backdrop-blur-sm">
@@ -268,14 +269,14 @@ const Profile = () => {
                     <User className="h-5 w-5 text-blue-600" />
                   </div>
                   <div>
-                    <CardTitle className="text-xl text-gray-900">Personal Information</CardTitle>
-                    <CardDescription>Manage your runner profile details</CardDescription>
+                    <CardTitle className="text-lg sm:text-xl text-gray-900">Personal Information</CardTitle>
+                    <CardDescription className="text-sm">Manage your runner profile details</CardDescription>
                   </div>
                 </div>
               </CardHeader>
               <form onSubmit={handleUpdateProfile}>
-                <CardContent className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <CardContent className="space-y-4 sm:space-y-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                     <div className="space-y-2">
                       <Label htmlFor="firstName" className="text-sm font-medium text-gray-700">
                         <User className="h-4 w-4 inline mr-2" />
@@ -285,7 +286,7 @@ const Profile = () => {
                         id="firstName"
                         value={firstName}
                         onChange={(e) => setFirstName(e.target.value)}
-                        className="border-2 border-gray-200 focus:border-blue-500 transition-colors"
+                        className="border-2 border-gray-200 focus:border-blue-500 transition-colors h-11"
                       />
                     </div>
                     <div className="space-y-2">
@@ -297,7 +298,7 @@ const Profile = () => {
                         id="lastName"
                         value={lastName}
                         onChange={(e) => setLastName(e.target.value)}
-                        className="border-2 border-gray-200 focus:border-blue-500 transition-colors"
+                        className="border-2 border-gray-200 focus:border-blue-500 transition-colors h-11"
                       />
                     </div>
                   </div>
@@ -312,7 +313,7 @@ const Profile = () => {
                       type="email"
                       value={currentUser?.email || ""}
                       disabled
-                      className="bg-gray-50 border-2 border-gray-200"
+                      className="bg-gray-50 border-2 border-gray-200 h-11"
                     />
                     <p className="text-xs text-gray-500 flex items-center gap-1">
                       <div className="w-1 h-1 bg-gray-400 rounded-full"></div>
@@ -330,7 +331,7 @@ const Profile = () => {
                       value={phoneNumber}
                       onChange={(e) => setPhoneNumber(e.target.value)}
                       placeholder="0XX XXX XXXX"
-                      className="border-2 border-gray-200 focus:border-blue-500 transition-colors"
+                      className="border-2 border-gray-200 focus:border-blue-500 transition-colors h-11"
                     />
                   </div>
                   
@@ -343,12 +344,12 @@ const Profile = () => {
                       id="studentNumber"
                       value={studentNumber}
                       onChange={(e) => setStudentNumber(e.target.value)}
-                      className="border-2 border-gray-200 focus:border-blue-500 transition-colors"
+                      className="border-2 border-gray-200 focus:border-blue-500 transition-colors h-11"
                     />
                   </div>
                 </CardContent>
-                <CardFooter className="pt-6">
-                  <Button type="submit" className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8">
+                <CardFooter className="pt-4 sm:pt-6">
+                  <Button type="submit" className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 sm:px-8 h-11">
                     Update Profile
                   </Button>
                 </CardFooter>
@@ -363,13 +364,13 @@ const Profile = () => {
                     <div className="h-5 w-5 bg-purple-600 rounded-sm"></div>
                   </div>
                   <div>
-                    <CardTitle className="text-xl text-gray-900">Security Settings</CardTitle>
-                    <CardDescription>Update your account password</CardDescription>
+                    <CardTitle className="text-lg sm:text-xl text-gray-900">Security Settings</CardTitle>
+                    <CardDescription className="text-sm">Update your account password</CardDescription>
                   </div>
                 </div>
               </CardHeader>
               <form onSubmit={handleChangePassword}>
-                <CardContent className="space-y-6">
+                <CardContent className="space-y-4 sm:space-y-6">
                   <div className="space-y-2">
                     <Label htmlFor="currentPassword" className="text-sm font-medium text-gray-700">Current Password</Label>
                     <Input
@@ -377,7 +378,7 @@ const Profile = () => {
                       type="password"
                       value={currentPassword}
                       onChange={(e) => setCurrentPassword(e.target.value)}
-                      className="border-2 border-gray-200 focus:border-purple-500 transition-colors"
+                      className="border-2 border-gray-200 focus:border-purple-500 transition-colors h-11"
                       required
                     />
                   </div>
@@ -391,7 +392,7 @@ const Profile = () => {
                       type="password"
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
-                      className="border-2 border-gray-200 focus:border-purple-500 transition-colors"
+                      className="border-2 border-gray-200 focus:border-purple-500 transition-colors h-11"
                       required
                     />
                     <p className="text-xs text-gray-500 flex items-center gap-1">
@@ -407,13 +408,13 @@ const Profile = () => {
                       type="password"
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
-                      className="border-2 border-gray-200 focus:border-purple-500 transition-colors"
+                      className="border-2 border-gray-200 focus:border-purple-500 transition-colors h-11"
                       required
                     />
                   </div>
                 </CardContent>
-                <CardFooter className="pt-6">
-                  <Button type="submit" className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-8">
+                <CardFooter className="pt-4 sm:pt-6">
+                  <Button type="submit" className="w-full sm:w-auto bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-6 sm:px-8 h-11">
                     Change Password
                   </Button>
                 </CardFooter>
@@ -429,22 +430,22 @@ const Profile = () => {
                   <div className="p-2 bg-green-100 rounded-lg">
                     <Trophy className="h-5 w-5 text-green-600" />
                   </div>
-                  <CardTitle className="text-xl text-gray-900">Runner Statistics</CardTitle>
+                  <CardTitle className="text-lg sm:text-xl text-gray-900">Runner Statistics</CardTitle>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="text-center p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl">
-                    <div className="text-2xl font-bold text-blue-700">{runnerStats.totalDeliveries}</div>
-                    <div className="text-sm text-blue-600 font-medium">Total Deliveries</div>
+              <CardContent className="space-y-4 sm:space-y-6">
+                <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                  <div className="text-center p-3 sm:p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl">
+                    <div className="text-xl sm:text-2xl font-bold text-blue-700">{runnerStats.totalDeliveries}</div>
+                    <div className="text-xs sm:text-sm text-blue-600 font-medium">Total Deliveries</div>
                   </div>
-                  <div className="text-center p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-xl">
-                    <div className="text-2xl font-bold text-green-700">R{runnerStats.totalEarnings.toFixed(2)}</div>
-                    <div className="text-sm text-green-600 font-medium">Total Earned</div>
+                  <div className="text-center p-3 sm:p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-xl">
+                    <div className="text-xl sm:text-2xl font-bold text-green-700">R{runnerStats.totalEarnings.toFixed(2)}</div>
+                    <div className="text-xs sm:text-sm text-green-600 font-medium">Total Earned</div>
                   </div>
                 </div>
                 
-                <div className="space-y-4">
+                <div className="space-y-3 sm:space-y-4">
                   <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
                     <div className="flex items-center gap-2">
                       <Star className="h-4 w-4 text-yellow-600" />
@@ -481,7 +482,7 @@ const Profile = () => {
                 
                 <Button 
                   variant="outline" 
-                  className="w-full border-2 border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 transition-colors"
+                  className="w-full border-2 border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 transition-colors h-11"
                   onClick={handleLogout}
                 >
                   Sign Out
