@@ -9,7 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/components/ui/use-toast";
-import { ChevronLeft, User, Star, Trophy, Clock, Phone, IdCard, Mail } from "lucide-react";
+import { ChevronLeft, User, Star, Trophy, Clock, Phone, IdCard, Mail, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 const Profile = () => {
@@ -33,98 +33,113 @@ const Profile = () => {
     averageRating: 0
   });
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Fetch runner profile and statistics
-  useEffect(() => {
-    const fetchRunnerData = async () => {
-      if (!currentUser?.id) return;
+  const fetchRunnerData = async () => {
+    if (!currentUser?.id) return;
 
-      try {
-        // Fetch runner profile
-        const { data: profile, error: profileError } = await supabase
-          .from('runner_profiles')
-          .select('*')
-          .eq('user_id', currentUser.id)
-          .single();
+    try {
+      console.log('Fetching runner data for user:', currentUser.id);
+      
+      // Fetch runner profile
+      const { data: profile, error: profileError } = await supabase
+        .from('runner_profiles')
+        .select('*')
+        .eq('user_id', currentUser.id)
+        .single();
 
-        if (profileError) {
-          console.error('Error fetching runner profile:', profileError);
-        } else {
-          setRunnerProfile(profile);
-        }
+      if (profileError) {
+        console.error('Error fetching runner profile:', profileError);
+      } else {
+        console.log('Runner profile fetched:', profile);
+        setRunnerProfile(profile);
+      }
 
-        // Fetch total deliveries and calculate stats from orders
-        const { data: orders, error: ordersError } = await supabase
-          .from('orders')
-          .select('id, status, total_amount, created_at')
-          .eq('runner_id', currentUser.id);
+      // Fetch total deliveries and calculate stats from orders
+      const { data: orders, error: ordersError } = await supabase
+        .from('orders')
+        .select('id, status, total_amount, created_at')
+        .eq('runner_id', currentUser.id);
 
-        if (ordersError) {
-          console.error('Error fetching orders:', ordersError);
-        } else {
-          const completedOrders = orders?.filter(order => order.status === 'delivered') || [];
+      if (ordersError) {
+        console.error('Error fetching orders:', ordersError);
+      } else {
+        const completedOrders = orders?.filter(order => order.status === 'delivered') || [];
+        
+        setRunnerStats(prev => ({
+          ...prev,
+          totalDeliveries: completedOrders.length,
+          completedOrders: completedOrders.length
+        }));
+      }
+
+      // Fetch total earnings from runner_earnings table
+      const { data: earnings, error: earningsError } = await supabase
+        .from('runner_earnings')
+        .select('total_earned')
+        .eq('runner_id', currentUser.id);
+
+      if (earningsError) {
+        console.error('Error fetching earnings:', earningsError);
+      } else {
+        const totalEarnings = earnings?.reduce((sum, earning) => sum + (earning.total_earned || 0), 0) || 0;
+        setRunnerStats(prev => ({
+          ...prev,
+          totalEarnings: totalEarnings
+        }));
+      }
+
+      // Fetch average rating from order reviews
+      const { data: reviews, error: reviewsError } = await supabase
+        .from('order_reviews')
+        .select('runner_rating')
+        .eq('runner_id', currentUser.id)
+        .not('runner_rating', 'is', null);
+
+      if (reviewsError) {
+        console.error('Error fetching reviews:', reviewsError);
+      } else {
+        if (reviews && reviews.length > 0) {
+          const validRatings = reviews.filter(review => review.runner_rating !== null);
+          const averageRating = validRatings.length > 0 
+            ? validRatings.reduce((sum, review) => sum + review.runner_rating, 0) / validRatings.length
+            : 0;
           
           setRunnerStats(prev => ({
             ...prev,
-            totalDeliveries: completedOrders.length,
-            completedOrders: completedOrders.length
+            rating: averageRating,
+            averageRating: averageRating
           }));
         }
-
-        // Fetch total earnings from runner_earnings table
-        const { data: earnings, error: earningsError } = await supabase
-          .from('runner_earnings')
-          .select('total_earned')
-          .eq('runner_id', currentUser.id);
-
-        if (earningsError) {
-          console.error('Error fetching earnings:', earningsError);
-        } else {
-          const totalEarnings = earnings?.reduce((sum, earning) => sum + (earning.total_earned || 0), 0) || 0;
-          setRunnerStats(prev => ({
-            ...prev,
-            totalEarnings: totalEarnings
-          }));
-        }
-
-        // Fetch average rating from order reviews
-        const { data: reviews, error: reviewsError } = await supabase
-          .from('order_reviews')
-          .select('runner_rating')
-          .eq('runner_id', currentUser.id)
-          .not('runner_rating', 'is', null);
-
-        if (reviewsError) {
-          console.error('Error fetching reviews:', reviewsError);
-        } else {
-          if (reviews && reviews.length > 0) {
-            const validRatings = reviews.filter(review => review.runner_rating !== null);
-            const averageRating = validRatings.length > 0 
-              ? validRatings.reduce((sum, review) => sum + review.runner_rating, 0) / validRatings.length
-              : 0;
-            
-            setRunnerStats(prev => ({
-              ...prev,
-              rating: averageRating,
-              averageRating: averageRating
-            }));
-          }
-        }
-
-        // Set form data from current user
-        setFirstName(currentUser.first_name || "");
-        setLastName(currentUser.last_name || "");
-        setPhoneNumber(currentUser.phone_number || "");
-        setStudentNumber(currentUser.student_number || "");
-      } catch (error) {
-        console.error('Error fetching runner data:', error);
-      } finally {
-        setIsLoading(false);
       }
-    };
 
+      // Set form data from current user
+      setFirstName(currentUser.first_name || "");
+      setLastName(currentUser.last_name || "");
+      setPhoneNumber(currentUser.phone_number || "");
+      setStudentNumber(currentUser.student_number || "");
+    } catch (error) {
+      console.error('Error fetching runner data:', error);
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
     fetchRunnerData();
   }, [currentUser]);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await fetchRunnerData();
+    toast({
+      title: "Data refreshed",
+      description: "Runner profile data has been updated",
+      className: "bg-blue-50 border-blue-200 text-blue-800"
+    });
+  };
   
   // Form submission handlers
   const handleUpdateProfile = (e: React.FormEvent) => {
@@ -191,14 +206,26 @@ const Profile = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
       <div className="container py-8 animate-fade-in">
-        <Button
-          variant="ghost"
-          className="mb-6 pl-0 flex items-center gap-2 hover:bg-white/50 transition-colors"
-          onClick={() => navigate("/dashboard")}
-        >
-          <ChevronLeft className="h-4 w-4" />
-          Back to Dashboard
-        </Button>
+        <div className="flex items-center justify-between mb-6">
+          <Button
+            variant="ghost"
+            className="pl-0 flex items-center gap-2 hover:bg-white/50 transition-colors"
+            onClick={() => navigate("/dashboard")}
+          >
+            <ChevronLeft className="h-4 w-4" />
+            Back to Dashboard
+          </Button>
+          
+          <Button
+            variant="outline"
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="flex items-center gap-2"
+          >
+            <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            Refresh Data
+          </Button>
+        </div>
         
         {/* Header Section */}
         <div className="mb-8">
