@@ -169,8 +169,8 @@ const Index = () => {
                 <CardContent>
                   Total: R{order.total_amount.toFixed(2)}
                   <div className="mt-4">
-                    <Button as={Link} to={`/order/${order.id}`} variant="secondary">
-                      View Details
+                    <Button asChild variant="secondary">
+                      <Link to={`/order/${order.id}`}>View Details</Link>
                     </Button>
                   </div>
                 </CardContent>
