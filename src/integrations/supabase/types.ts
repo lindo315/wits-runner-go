@@ -1106,6 +1106,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      cancel_unaccepted_orders: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       deduct_wallet_credits: {
         Args: {
           p_user_id: string
