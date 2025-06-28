@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
@@ -405,7 +406,7 @@ const OrderDetails = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-        <div className="container max-w-4xl mx-auto py-4 px-4 sm:py-8">
+        <div className="container max-w-4xl mx-auto py-8 px-4">
           <div className="flex items-center justify-center min-h-[60vh]">
             <div className="text-center space-y-4">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
@@ -420,13 +421,13 @@ const OrderDetails = () => {
   if (error) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-        <div className="container max-w-4xl mx-auto py-4 px-4 sm:py-8">
+        <div className="container max-w-4xl mx-auto py-8 px-4">
           <div className="flex items-center justify-center min-h-[60vh]">
             <Card className="w-full max-w-md shadow-lg">
               <CardContent className="pt-6 text-center space-y-4">
                 <AlertTriangle className="h-12 w-12 text-red-500 mx-auto" />
                 <p className="text-lg font-medium text-red-600">Error Loading Order</p>
-                <p className="text-muted-foreground text-sm">{error}</p>
+                <p className="text-muted-foreground">{error}</p>
                 <Button 
                   variant="outline" 
                   onClick={() => navigate("/dashboard")}
@@ -446,13 +447,13 @@ const OrderDetails = () => {
   if (!order) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-        <div className="container max-w-4xl mx-auto py-4 px-4 sm:py-8">
+        <div className="container max-w-4xl mx-auto py-8 px-4">
           <div className="flex items-center justify-center min-h-[60vh]">
             <Card className="w-full max-w-md shadow-lg">
               <CardContent className="pt-6 text-center space-y-4">
                 <ShoppingBag className="h-12 w-12 text-muted-foreground mx-auto" />
                 <p className="text-lg font-medium">Order Not Found</p>
-                <p className="text-muted-foreground text-sm">The order you're looking for doesn't exist.</p>
+                <p className="text-muted-foreground">The order you're looking for doesn't exist.</p>
                 <Button 
                   variant="outline" 
                   onClick={() => navigate("/dashboard")}
@@ -471,47 +472,44 @@ const OrderDetails = () => {
   
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-      <div className="container max-w-4xl mx-auto py-4 px-4 sm:py-8 animate-fade-in">
+      <div className="container max-w-4xl mx-auto py-8 px-4 animate-fade-in">
         {/* Header */}
-        <div className="mb-6 sm:mb-8">
+        <div className="mb-8">
           <Button
             variant="ghost"
-            className="mb-4 sm:mb-6 pl-0 flex items-center gap-2 hover:bg-white/50 rounded-lg transition-colors"
+            className="mb-6 pl-0 flex items-center gap-2 hover:bg-white/50 rounded-lg transition-colors"
             onClick={() => navigate("/dashboard")}
           >
             <ChevronLeft className="h-4 w-4" />
-            <span className="hidden sm:inline">Back to Dashboard</span>
-            <span className="sm:hidden">Back</span>
+            Back to Dashboard
           </Button>
         </div>
         
         {/* Main Card */}
         <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
           <CardHeader className="pb-4 bg-gradient-to-r from-primary/5 to-blue-50 rounded-t-lg">
-            <div className="flex flex-col space-y-4">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
               <div className="space-y-3">
-                <div className="flex items-start sm:items-center gap-3 flex-wrap">
-                  <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 break-all">Order #{order.order_number}</h1>
-                  <div className="flex flex-wrap gap-2">
-                    <Badge className={`${statusColors[order.status as keyof typeof statusColors]} border font-medium px-3 py-1 text-xs sm:text-sm`}>
-                      {statusLabels[order.status as keyof typeof statusLabels]}
-                    </Badge>
-                    <Badge className={`${paymentStatusColors[order.payment_status as keyof typeof paymentStatusColors] || "bg-gray-100 border-gray-200"} border font-medium px-3 py-1 text-xs sm:text-sm`}>
-                      {order.payment_status ? order.payment_status.charAt(0).toUpperCase() + order.payment_status.slice(1) : "Unknown"}
-                    </Badge>
-                  </div>
+                <div className="flex items-center gap-3 flex-wrap">
+                  <h1 className="text-3xl font-bold text-gray-900">Order #{order.order_number}</h1>
+                  <Badge className={`${statusColors[order.status as keyof typeof statusColors]} border font-medium px-3 py-1`}>
+                    {statusLabels[order.status as keyof typeof statusLabels]}
+                  </Badge>
+                  <Badge className={`${paymentStatusColors[order.payment_status as keyof typeof paymentStatusColors] || "bg-gray-100 border-gray-200"} border font-medium px-3 py-1`}>
+                    {order.payment_status ? order.payment_status.charAt(0).toUpperCase() + order.payment_status.slice(1) : "Unknown"}
+                  </Badge>
                 </div>
-                <div className="flex items-center gap-2 text-muted-foreground text-sm">
-                  <Clock className="h-4 w-4 flex-shrink-0" />
-                  <p className="break-words">Placed on {formatOrderDate(order.created_at)}</p>
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Clock className="h-4 w-4" />
+                  <p>Placed on {formatOrderDate(order.created_at)}</p>
                 </div>
                 {order.cancelled_at && (
                   <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                    <p className="text-red-700 font-medium text-sm">
+                    <p className="text-red-700 font-medium">
                       Cancelled on {formatOrderDate(order.cancelled_at)}
                     </p>
                     {order.cancellation_reason && (
-                      <p className="text-red-600 text-xs mt-1">
+                      <p className="text-red-600 text-sm mt-1">
                         Reason: {order.cancellation_reason}
                       </p>
                     )}
@@ -519,13 +517,13 @@ const OrderDetails = () => {
                 )}
               </div>
               
-              {/* Action Buttons - Responsive Layout */}
-              <div className="flex flex-col sm:flex-row gap-3 pt-4">
+              {/* Action Buttons */}
+              <div className="flex gap-3 flex-wrap">
                 {!order.runner_id && order.status === "ready" && (
                   <Button 
                     onClick={handleAcceptOrder} 
                     disabled={isUpdating}
-                    className="bg-primary hover:bg-primary/90 shadow-md w-full sm:w-auto"
+                    className="bg-primary hover:bg-primary/90 shadow-md"
                     size="lg"
                   >
                     {isUpdating ? "Processing..." : "Accept Order"}
@@ -533,12 +531,12 @@ const OrderDetails = () => {
                 )}
                 
                 {order.runner_id && order.runner_id === currentUser?.id && order.status !== "cancelled" && order.status !== "delivered" && (
-                  <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                  <>
                     {order.status === "picked_up" && (
                       <Button 
                         onClick={handleMarkInTransit} 
                         disabled={isUpdating}
-                        className="bg-purple-600 hover:bg-purple-700 shadow-md w-full sm:w-auto"
+                        className="bg-purple-600 hover:bg-purple-700 shadow-md"
                         size="lg"
                       >
                         {isUpdating ? "Processing..." : "Mark In Transit"}
@@ -549,7 +547,7 @@ const OrderDetails = () => {
                       <Button 
                         onClick={handleMarkDelivered} 
                         disabled={isUpdating} 
-                        className="bg-green-600 hover:bg-green-700 shadow-md w-full sm:w-auto"
+                        className="bg-green-600 hover:bg-green-700 shadow-md"
                         size="lg"
                       >
                         {isUpdating ? "Processing..." : "Mark Delivered"}
@@ -562,33 +560,33 @@ const OrderDetails = () => {
                         isLoading={isUpdating}
                       />
                     )}
-                  </div>
+                  </>
                 )}
               </div>
             </div>
           </CardHeader>
           
-          <CardContent className="pt-6 sm:pt-8 space-y-6 sm:space-y-8">
+          <CardContent className="pt-8 space-y-8">
             {/* Payment Information */}
             <div className="space-y-4">
-              <h2 className="text-lg sm:text-xl font-semibold text-gray-900 flex items-center gap-2">
-                <CreditCard className="h-5 w-5 text-primary flex-shrink-0" />
+              <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+                <CreditCard className="h-5 w-5 text-primary" />
                 Payment Information
               </h2>
-              <div className={`rounded-xl p-4 sm:p-6 border-2 ${
+              <div className={`rounded-xl p-6 border-2 ${
                 order.payment_status === 'paid' ? 'bg-green-50 border-green-200' : 
                 order.payment_status === 'failed' ? 'bg-red-50 border-red-200' : 
                 order.payment_status === 'refunded' ? 'bg-blue-50 border-blue-200' :
                 'bg-yellow-50 border-yellow-200'
               }`}>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="grid md:grid-cols-3 gap-4">
                   <div>
                     <p className="text-sm font-medium text-gray-600">Method</p>
-                    <p className="text-base sm:text-lg font-semibold break-words">{order.payment_method === "cash" ? "Cash on Delivery" : "Online Payment"}</p>
+                    <p className="text-lg font-semibold">{order.payment_method === "cash" ? "Cash on Delivery" : "Online Payment"}</p>
                   </div>
                   <div>
                     <p className="text-sm font-medium text-gray-600">Status</p>
-                    <p className={`text-base sm:text-lg font-semibold ${
+                    <p className={`text-lg font-semibold ${
                       order.payment_status === 'paid' ? 'text-green-700' : 
                       order.payment_status === 'failed' ? 'text-red-700' : 
                       order.payment_status === 'refunded' ? 'text-blue-700' :
@@ -599,30 +597,29 @@ const OrderDetails = () => {
                   </div>
                   <div>
                     <p className="text-sm font-medium text-gray-600">Amount</p>
-                    <p className="text-xl sm:text-2xl font-bold text-gray-900">R{(order.total_amount || 0).toFixed(2)}</p>
+                    <p className="text-2xl font-bold text-gray-900">R{(order.total_amount || 0).toFixed(2)}</p>
                   </div>
                 </div>
                 
-                {/* Payment alerts */}
                 {order.payment_method === "cash" && order.status !== "cancelled" && (
-                  <div className="mt-4 p-3 sm:p-4 bg-amber-100 border border-amber-200 rounded-lg">
+                  <div className="mt-4 p-4 bg-amber-100 border border-amber-200 rounded-lg">
                     <div className="flex items-start gap-3">
                       <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
                       <div>
-                        <p className="font-medium text-amber-800 text-sm">Cash Collection Required</p>
-                        <p className="text-amber-700 text-xs sm:text-sm">Remember to collect R{(order.total_amount || 0).toFixed(2)} in cash from the customer.</p>
+                        <p className="font-medium text-amber-800">Cash Collection Required</p>
+                        <p className="text-amber-700 text-sm">Remember to collect R{(order.total_amount || 0).toFixed(2)} in cash from the customer.</p>
                       </div>
                     </div>
                   </div>
                 )}
 
                 {order.status === "cancelled" && order.payment_status === 'paid' && (
-                  <div className="mt-4 p-3 sm:p-4 bg-blue-100 border border-blue-200 rounded-lg">
+                  <div className="mt-4 p-4 bg-blue-100 border border-blue-200 rounded-lg">
                     <div className="flex items-start gap-3">
                       <CreditCard className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
                       <div>
-                        <p className="font-medium text-blue-800 text-sm">Refund Processed</p>
-                        <p className="text-blue-700 text-xs sm:text-sm">Customer has been automatically refunded to their wallet.</p>
+                        <p className="font-medium text-blue-800">Refund Processed</p>
+                        <p className="text-blue-700 text-sm">Customer has been automatically refunded to their wallet.</p>
                       </div>
                     </div>
                   </div>
@@ -630,38 +627,38 @@ const OrderDetails = () => {
               </div>
             </div>
 
-            <Separator className="my-6 sm:my-8" />
+            <Separator className="my-8" />
             
             {/* Customer Information */}
             <div className="space-y-4">
-              <h2 className="text-lg sm:text-xl font-semibold text-gray-900 flex items-center gap-2">
-                <User className="h-5 w-5 text-primary flex-shrink-0" />
+              <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+                <User className="h-5 w-5 text-primary" />
                 Customer Information
               </h2>
-              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 sm:p-6 border border-blue-100">
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-100">
                 {customerInfo ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                  <div className="grid md:grid-cols-2 gap-6">
                     <div className="space-y-3">
                       <div>
                         <p className="text-sm font-medium text-gray-600">Full Name</p>
-                        <p className="text-base sm:text-lg font-semibold text-gray-900 break-words">{customerInfo.full_name}</p>
+                        <p className="text-lg font-semibold text-gray-900">{customerInfo.full_name}</p>
                       </div>
                       <div>
                         <p className="text-sm font-medium text-gray-600">Email</p>
-                        <p className="text-gray-700 break-all text-sm sm:text-base">{customerInfo.email}</p>
+                        <p className="text-gray-700">{customerInfo.email}</p>
                       </div>
                     </div>
                     <div className="space-y-3">
                       {customerInfo.phone_number && (
                         <div>
                           <p className="text-sm font-medium text-gray-600">Phone</p>
-                          <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                            <p className="text-gray-700 text-sm sm:text-base break-all">{customerInfo.phone_number}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="text-gray-700">{customerInfo.phone_number}</p>
                             <Button 
                               variant="outline" 
                               size="sm"
                               onClick={() => window.open(`tel:${customerInfo.phone_number}`, '_blank')}
-                              className="h-8 w-full sm:w-auto"
+                              className="h-8"
                             >
                               <Phone className="h-3 w-3 mr-1" />
                               Call
@@ -672,49 +669,49 @@ const OrderDetails = () => {
                       {customerInfo.student_number && (
                         <div>
                           <p className="text-sm font-medium text-gray-600">Student Number</p>
-                          <p className="text-gray-700 text-sm sm:text-base">{customerInfo.student_number}</p>
+                          <p className="text-gray-700">{customerInfo.student_number}</p>
                         </div>
                       )}
                     </div>
                   </div>
                 ) : (
-                  <p className="text-muted-foreground text-sm">
+                  <p className="text-muted-foreground">
                     {order.customer_id ? "Loading customer information..." : "No customer information available"}
                   </p>
                 )}
               </div>
             </div>
 
-            <Separator className="my-6 sm:my-8" />
+            <Separator className="my-8" />
             
             {/* Location Information */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
+            <div className="grid md:grid-cols-2 gap-8">
               {/* Pickup Information */}
               <div className="space-y-4">
-                <h2 className="text-lg sm:text-xl font-semibold text-gray-900 flex items-center gap-2">
-                  <ShoppingBag className="h-5 w-5 text-primary flex-shrink-0" />
+                <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+                  <ShoppingBag className="h-5 w-5 text-primary" />
                   Pickup Location
                 </h2>
-                <div className="bg-gradient-to-r from-orange-50 to-amber-50 rounded-xl p-4 sm:p-6 border border-orange-100">
+                <div className="bg-gradient-to-r from-orange-50 to-amber-50 rounded-xl p-6 border border-orange-100">
                   <div className="space-y-3">
                     <div>
                       <p className="text-sm font-medium text-gray-600">Restaurant</p>
-                      <p className="text-base sm:text-lg font-semibold text-gray-900 break-words">{order.merchant?.name}</p>
+                      <p className="text-lg font-semibold text-gray-900">{order.merchant?.name}</p>
                     </div>
                     <div>
                       <p className="text-sm font-medium text-gray-600">Address</p>
-                      <p className="text-gray-700 text-sm sm:text-base break-words">{order.merchant?.location}</p>
+                      <p className="text-gray-700">{order.merchant?.location}</p>
                     </div>
                     {order.merchant?.contact_phone && (
                       <div>
                         <p className="text-sm font-medium text-gray-600">Contact</p>
-                        <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                          <p className="text-gray-700 text-sm sm:text-base break-all">{order.merchant.contact_phone}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="text-gray-700">{order.merchant.contact_phone}</p>
                           <Button 
                             variant="outline" 
                             size="sm"
                             onClick={() => window.open(`tel:${order.merchant.contact_phone}`, '_blank')}
-                            className="h-8 w-full sm:w-auto"
+                            className="h-8"
                           >
                             <Phone className="h-3 w-3 mr-1" />
                             Call
@@ -728,28 +725,28 @@ const OrderDetails = () => {
               
               {/* Delivery Information */}
               <div className="space-y-4">
-                <h2 className="text-lg sm:text-xl font-semibold text-gray-900 flex items-center gap-2">
-                  <MapPin className="h-5 w-5 text-primary flex-shrink-0" />
+                <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+                  <MapPin className="h-5 w-5 text-primary" />
                   Delivery Location
                 </h2>
-                <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-4 sm:p-6 border border-green-100">
+                <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-6 border border-green-100">
                   <div className="space-y-3">
                     <div>
                       <p className="text-sm font-medium text-gray-600">Building & Room</p>
-                      <p className="text-base sm:text-lg font-semibold text-gray-900 break-words">
+                      <p className="text-lg font-semibold text-gray-900">
                         {order.customer_addresses?.building_name}, Room {order.customer_addresses?.room_number}
                       </p>
                     </div>
                     {order.customer_addresses?.full_address && (
                       <div>
                         <p className="text-sm font-medium text-gray-600">Full Address</p>
-                        <p className="text-gray-700 text-sm sm:text-base break-words">{order.customer_addresses.full_address}</p>
+                        <p className="text-gray-700">{order.customer_addresses.full_address}</p>
                       </div>
                     )}
                     {order.customer_addresses?.delivery_instructions && (
                       <div>
                         <p className="text-sm font-medium text-gray-600">Special Instructions</p>
-                        <p className="text-gray-700 italic text-sm sm:text-base break-words">{order.customer_addresses.delivery_instructions}</p>
+                        <p className="text-gray-700 italic">{order.customer_addresses.delivery_instructions}</p>
                       </div>
                     )}
                   </div>
@@ -757,47 +754,47 @@ const OrderDetails = () => {
               </div>
             </div>
 
-            <Separator className="my-6 sm:my-8" />
+            <Separator className="my-8" />
             
             {/* Order Items */}
             <div className="space-y-4">
-              <h2 className="text-lg sm:text-xl font-semibold text-gray-900 flex items-center gap-2">
-                <ShoppingBag className="h-5 w-5 text-primary flex-shrink-0" />
+              <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+                <ShoppingBag className="h-5 w-5 text-primary" />
                 Order Items
               </h2>
-              <div className="bg-white rounded-xl p-4 sm:p-6 border border-gray-200 shadow-sm">
+              <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
                 <div className="space-y-4">
                   {order.order_items && order.order_items.map((item: any, index: number) => (
-                    <div key={index} className="flex flex-col sm:flex-row sm:justify-between sm:items-start p-3 sm:p-4 bg-gray-50 rounded-lg gap-3">
+                    <div key={index} className="flex justify-between items-start p-4 bg-gray-50 rounded-lg">
                       <div className="flex-1">
-                        <p className="font-semibold text-gray-900 text-base sm:text-lg break-words">
+                        <p className="font-semibold text-gray-900 text-lg">
                           {item.quantity}× {item.menu_item?.name || "Item"}
                         </p>
                         {item.special_requests && (
-                          <p className="text-sm text-gray-600 mt-1 italic break-words">
+                          <p className="text-sm text-gray-600 mt-1 italic">
                             Special request: {item.special_requests}
                           </p>
                         )}
                       </div>
-                      <p className="font-bold text-base sm:text-lg text-gray-900 text-right">R{(item.total_price || 0).toFixed(2)}</p>
+                      <p className="font-bold text-lg text-gray-900">R{(item.total_price || 0).toFixed(2)}</p>
                     </div>
                   ))}
                 </div>
                 
-                <Separator className="my-4 sm:my-6" />
+                <Separator className="my-6" />
                 
                 {/* Order Summary */}
                 <div className="space-y-3">
-                  <div className="flex justify-between text-gray-600 text-sm sm:text-base">
+                  <div className="flex justify-between text-gray-600">
                     <span>Subtotal</span>
                     <span>R{(order.subtotal || 0).toFixed(2)}</span>
                   </div>
-                  <div className="flex justify-between text-gray-600 text-sm sm:text-base">
+                  <div className="flex justify-between text-gray-600">
                     <span>Delivery Fee</span>
                     <span>R{(order.delivery_fee || 0).toFixed(2)}</span>
                   </div>
                   <Separator />
-                  <div className="flex justify-between text-lg sm:text-xl font-bold text-gray-900">
+                  <div className="flex justify-between text-xl font-bold text-gray-900">
                     <span>Total</span>
                     <span>R{(order.total_amount || 0).toFixed(2)}</span>
                   </div>
