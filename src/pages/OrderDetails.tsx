@@ -67,8 +67,8 @@ const OrderDetails = () => {
         
         console.log("Fetching order details for ID:", id);
         
-        // First try to find by UUID, then by order number
-        let orderQuery = supabase
+        // Fetch the order with all related data
+        const { data: orderData, error: orderError } = await supabase
           .from("orders")
           .select(`
             *,
@@ -78,19 +78,9 @@ const OrderDetails = () => {
               *,
               menu_item:menu_item_id (*)
             )
-          `);
-        
-        // Check if the ID looks like a UUID or order number
-        const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
-        
-        if (isUUID) {
-          orderQuery = orderQuery.eq("id", id);
-        } else {
-          // Assume it's an order number
-          orderQuery = orderQuery.eq("order_number", id);
-        }
-        
-        const { data: orderData, error: orderError } = await orderQuery.single();
+          `)
+          .eq("id", id)
+          .single();
         
         if (orderError) {
           console.error("Error fetching order:", orderError);
