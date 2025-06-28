@@ -314,7 +314,7 @@ const Dashboard = () => {
     }
   };
   
-  // Handle order acceptance
+  // Handle order acceptance with active orders limit
   const handleAcceptOrder = async (orderId: string) => {
     if (!currentUser) return;
     
@@ -328,6 +328,33 @@ const Dashboard = () => {
     }
     
     try {
+      // Check current active orders count
+      const { count: activeOrdersCount, error: countError } = await supabase
+        .from("orders")
+        .select("*", { count: "exact", head: true })
+        .eq("runner_id", currentUser.id)
+        .in("status", ["picked_up", "in_transit"]);
+      
+      if (countError) {
+        console.error("Error checking active orders:", countError);
+        toast({
+          title: "Failed to check active orders",
+          description: "Please try again",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      // Check if runner already has 3 active orders
+      if (activeOrdersCount && activeOrdersCount >= 3) {
+        toast({
+          title: "Maximum active orders reached",
+          description: "You can only have 3 active orders at once. Please complete some orders before accepting new ones.",
+          variant: "destructive"
+        });
+        return;
+      }
+      
       // Update order status and assign runner
       const { error: updateError } = await supabase
         .from("orders")
