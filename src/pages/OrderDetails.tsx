@@ -11,6 +11,7 @@ import { ChevronLeft, ShoppingBag, MapPin, User, Phone, CreditCard, Clock, Alert
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { CancelOrderDialog } from "@/components/CancelOrderDialog";
+import { getRunnerBaseFee } from "@/lib/utils";
 
 const OrderDetails = () => {
   const { id } = useParams<{ id: string }>();
@@ -278,8 +279,8 @@ const OrderDetails = () => {
         console.error("Error updating order history:", historyError);
       }
       
-      // Create an earning record with a fixed base fee
-      const baseFee = 15.00; // Example base fee
+      // Create an earning record with configurable base fee
+      const baseFee = await getRunnerBaseFee(); // Get base fee from configuration
       const tipAmount = 0.00; // Could be calculated or provided by user input
       const bonusAmount = 0.00; // Could be calculated based on conditions
       const totalEarned = baseFee + tipAmount + bonusAmount;

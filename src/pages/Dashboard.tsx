@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
+import { getRunnerBaseFee } from "@/lib/utils";
 
 // Define the types based on the database schema and actual returned data
 interface Order {
@@ -514,7 +515,7 @@ const Dashboard = () => {
         .single();
       
       if (orderData) {
-        const baseFee = 15.00; // Base delivery fee
+        const baseFee = await getRunnerBaseFee(); // Get base fee from configuration
         const tipAmount = 0.00; // Could be calculated or provided by user input
         const bonusAmount = 0.00; // Could be calculated based on conditions
         const totalEarned = baseFee + tipAmount + bonusAmount;

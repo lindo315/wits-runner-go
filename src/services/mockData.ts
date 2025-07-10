@@ -274,17 +274,24 @@ export const generateEarningsData = (runnerId: string) => {
     order => order.status === "delivered" && order.runner_id === runnerId
   );
   
-  return orders.map(order => ({
-    id: `earning-${order.id}`,
-    runner_id: runnerId,
-    order_id: order.id,
-    base_fee: 15,
-    tip_amount: Math.random() > 0.5 ? Math.floor(Math.random() * 20) : 0,
-    bonus_amount: 0,
-    total_earned: 15 + (Math.random() > 0.5 ? Math.floor(Math.random() * 20) : 0),
-    payout_status: "paid",
-    created_at: order.delivered_at || order.created_at
-  }));
+  return orders.map(order => {
+    const baseFee = 10; // Updated to match configuration
+    const tipAmount = Math.random() > 0.5 ? Math.floor(Math.random() * 20) : 0;
+    const bonusAmount = 0;
+    const totalEarned = baseFee + tipAmount + bonusAmount;
+    
+    return {
+      id: `earning-${order.id}`,
+      runner_id: runnerId,
+      order_id: order.id,
+      base_fee: baseFee,
+      tip_amount: tipAmount,
+      bonus_amount: bonusAmount,
+      total_earned: totalEarned,
+      payout_status: "paid",
+      created_at: order.delivered_at || order.created_at
+    };
+  });
 };
 
 // Calculate earnings summary
