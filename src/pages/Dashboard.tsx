@@ -25,11 +25,13 @@ import {
   AlertCircle,
   Zap,
   Star,
-  Activity
+  Activity,
+  Bell
 } from "lucide-react";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { getRunnerBaseFee } from "@/lib/utils";
+import { RunnerNotifications } from "@/components/RunnerNotifications";
 
 // Define the types based on the database schema and actual returned data
 interface Order {
@@ -841,7 +843,7 @@ const Dashboard = () => {
           </CardHeader>
           <CardContent className="pt-4 sm:pt-6 p-4 sm:p-6">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid grid-cols-3 mb-6 sm:mb-8 bg-gray-100 p-1 rounded-xl w-full">
+              <TabsList className="grid grid-cols-4 mb-6 sm:mb-8 bg-gray-100 p-1 rounded-xl w-full">
                 <TabsTrigger 
                   value="available" 
                   className="data-[state=active]:bg-white data-[state=active]:text-blue-700 data-[state=active]:shadow-md rounded-lg transition-all duration-200 text-xs sm:text-sm"
@@ -867,6 +869,15 @@ const Dashboard = () => {
                   <div className="flex items-center gap-1 sm:gap-2">
                     <CheckCircle2 className="h-3 w-3 sm:h-4 sm:w-4" />
                     <span className="font-medium">Completed</span>
+                  </div>
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="notifications" 
+                  className="data-[state=active]:bg-white data-[state=active]:text-orange-700 data-[state=active]:shadow-md rounded-lg transition-all duration-200 text-xs sm:text-sm"
+                >
+                  <div className="flex items-center gap-1 sm:gap-2">
+                    <Bell className="h-3 w-3 sm:h-4 sm:w-4" />
+                    <span className="font-medium">Notifications</span>
                   </div>
                 </TabsTrigger>
               </TabsList>
@@ -1243,6 +1254,11 @@ const Dashboard = () => {
                     ))}
                   </div>
                 )}
+              </TabsContent>
+              
+              {/* Notifications Tab */}
+              <TabsContent value="notifications">
+                <RunnerNotifications />
               </TabsContent>
             </Tabs>
           </CardContent>
