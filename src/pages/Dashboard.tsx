@@ -329,6 +329,32 @@ const Dashboard = () => {
     }
     
     try {
+      // First check the order's payment status
+      const { data: orderData, error: orderError } = await supabase
+        .from("orders")
+        .select("payment_status")
+        .eq("id", orderId)
+        .single();
+      
+      if (orderError) {
+        console.error("Error checking order payment status:", orderError);
+        toast({
+          title: "Failed to check order details",
+          description: "Please try again",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      if (orderData.payment_status !== "paid") {
+        toast({
+          title: "Cannot accept order",
+          description: "Orders can only be accepted after payment is confirmed",
+          variant: "destructive"
+        });
+        return;
+      }
+      
       // Check current active orders count
       const { count: activeOrdersCount, error: countError } = await supabase
         .from("orders")

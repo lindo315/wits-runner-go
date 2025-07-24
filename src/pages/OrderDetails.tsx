@@ -133,6 +133,16 @@ const OrderDetails = () => {
   const handleAcceptOrder = async () => {
     if (!currentUser || !order) return;
     
+    // Check if payment is confirmed
+    if (order.payment_status !== "paid") {
+      toast({
+        title: "Cannot accept order",
+        description: "Orders can only be accepted after payment is confirmed",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     try {
       setIsUpdating(true);
       
