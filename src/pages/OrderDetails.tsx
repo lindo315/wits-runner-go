@@ -74,7 +74,6 @@ const OrderDetails = () => {
           .select(`
             *,
             merchant:merchant_id (*),
-            customer_addresses:delivery_address_id (*),
             order_items (
               *,
               menu_item:menu_item_id (*)
@@ -82,6 +81,17 @@ const OrderDetails = () => {
           `)
           .eq("id", id)
           .single();
+        
+        // Separately fetch delivery address if delivery_address_id exists
+        let deliveryAddress = null;
+        if (orderData?.delivery_address_id) {
+          const { data: addressData } = await supabase
+            .from("customer_addresses")
+            .select("*")
+            .eq("id", orderData.delivery_address_id)
+            .single();
+          deliveryAddress = addressData;
+        }
         
         if (orderError) {
           console.error("Error fetching order:", orderError);
@@ -92,7 +102,12 @@ const OrderDetails = () => {
         console.log("Order data received:", orderData);
         
         if (orderData) {
-          setOrder(orderData);
+          // Attach delivery address to order data
+          const orderWithAddress = {
+            ...orderData,
+            customer_addresses: deliveryAddress
+          };
+          setOrder(orderWithAddress);
           
           // Fetch customer information if available
           if (orderData.customer_id) {
