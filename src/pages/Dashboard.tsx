@@ -166,14 +166,10 @@ const Dashboard = () => {
           total_amount,
           created_at,
           delivered_at,
+          delivery_address_id,
           merchant:merchant_id (
             name,
             location
-          ),
-          customer_addresses:delivery_address_id (
-            building_name,
-            room_number,
-            delivery_instructions
           ),
           order_items (
             id,
@@ -218,9 +214,28 @@ const Dashboard = () => {
       console.log("Orders fetched:", data);
       console.log("Number of orders:", data?.length || 0);
       
+      // Fetch delivery addresses for each order and attach them
+      const ordersWithAddresses = await Promise.all(
+        (data || []).map(async (order: any) => {
+          let customer_addresses = null;
+          if (order.delivery_address_id) {
+            const { data: addressData } = await supabase
+              .from("customer_addresses")
+              .select("building_name, room_number, delivery_instructions")
+              .eq("id", order.delivery_address_id)
+              .single();
+            customer_addresses = addressData;
+          }
+          return {
+            ...order,
+            customer_addresses
+          };
+        })
+      );
+      
       // Debugging any data issues
-      if (data && data.length > 0) {
-        console.log("Sample order data:", data[0]);
+      if (ordersWithAddresses && ordersWithAddresses.length > 0) {
+        console.log("Sample order data with address:", ordersWithAddresses[0]);
       } else {
         console.log("No orders found for the current query");
         
@@ -236,7 +251,7 @@ const Dashboard = () => {
       }
       
       // Type assertion to match the Order interface
-      setOrders(data as Order[]);
+      setOrders(ordersWithAddresses as Order[]);
     } catch (err: any) {
       console.error("Error fetching orders:", err);
       setError(`Failed to load orders: ${err.message || "Please try again later."}`);
