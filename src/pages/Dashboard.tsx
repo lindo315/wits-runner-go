@@ -98,6 +98,7 @@ const Dashboard = () => {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [runnerBaseFee, setRunnerBaseFee] = useState<number>(10.00);
   const [isUpdatingOrder, setIsUpdatingOrder] = useState(false);
   
   // Status styling
@@ -669,7 +670,18 @@ const Dashboard = () => {
   // Effect to fetch earnings data on mount
   useEffect(() => {
     fetchEarnings();
+    loadRunnerBaseFee();
   }, [currentUser]);
+
+  // Load runner base fee from config
+  const loadRunnerBaseFee = async () => {
+    try {
+      const baseFee = await getRunnerBaseFee();
+      setRunnerBaseFee(baseFee);
+    } catch (err) {
+      console.error("Error loading runner base fee:", err);
+    }
+  };
   
   const handleManualRefresh = () => {
     fetchOrders();
@@ -986,7 +998,7 @@ const Dashboard = () => {
                                     <p className="text-2xl sm:text-3xl font-bold text-green-600 mb-1">R{order.total_amount?.toFixed(2)}</p>
                                     <p className="text-gray-500 text-sm sm:text-base">Total amount</p>
                                     <div className="mt-2 p-2 bg-green-50 rounded-lg border border-green-200">
-                                      <p className="text-green-700 font-semibold text-xs sm:text-sm">You'll earn: R15.00</p>
+                                      <p className="text-green-700 font-semibold text-xs sm:text-sm">You'll earn: R{runnerBaseFee.toFixed(2)}</p>
                                     </div>
                                   </div>
                                   <Button 
@@ -1234,7 +1246,7 @@ const Dashboard = () => {
                                 <div className="text-center sm:text-left">
                                   <p className="text-lg sm:text-xl font-bold text-green-600">R{order.total_amount?.toFixed(2)}</p>
                                   <p className="text-xs sm:text-sm text-green-600 font-medium">
-                                    Earned: R15.00
+                                    Earned: R{runnerBaseFee.toFixed(2)}
                                   </p>
                                 </div>
                                 <Button 
