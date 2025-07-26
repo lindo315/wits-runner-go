@@ -675,6 +675,39 @@ export type Database = {
           },
         ]
       }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          email: string | null
+          full_name: string | null
+          id: string
+          role: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          role?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          role?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       promotional_campaigns: {
         Row: {
           created_at: string | null
@@ -983,6 +1016,30 @@ export type Database = {
           },
         ]
       }
+      user_roles: {
+        Row: {
+          assigned_at: string | null
+          assigned_by: string | null
+          id: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          assigned_at?: string | null
+          assigned_by?: string | null
+          id?: string
+          role: string
+          user_id: string
+        }
+        Update: {
+          assigned_at?: string | null
+          assigned_by?: string | null
+          id?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       users: {
         Row: {
           created_at: string | null
@@ -1111,6 +1168,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      assign_user_role: {
+        Args: { target_user_id: string; new_role: string }
+        Returns: boolean
+      }
       cancel_unaccepted_orders: {
         Args: Record<PropertyKey, never>
         Returns: undefined
@@ -1124,6 +1185,10 @@ export type Database = {
           p_reference_id?: string
         }
         Returns: boolean
+      }
+      get_admin_dashboard_stats: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
       }
       get_auth_user_id: {
         Args: Record<PropertyKey, never>
@@ -1168,6 +1233,10 @@ export type Database = {
         Args: { user_id: string }
         Returns: boolean
       }
+      log_security_event: {
+        Args: { event_type: string; details?: Json }
+        Returns: undefined
+      }
       refund_wallet_credits: {
         Args: {
           p_user_id: string
@@ -1176,6 +1245,14 @@ export type Database = {
           p_reference_id?: string
         }
         Returns: boolean
+      }
+      send_promotional_notifications: {
+        Args: {
+          campaign_title: string
+          campaign_message: string
+          target_role?: string
+        }
+        Returns: number
       }
     }
     Enums: {
