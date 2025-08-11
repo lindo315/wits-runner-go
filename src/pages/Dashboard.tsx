@@ -32,6 +32,7 @@ import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { getRunnerBaseFee } from "@/lib/utils";
 import { RunnerNotifications } from "@/components/RunnerNotifications";
+import { PinVerificationDialog } from "@/components/PinVerificationDialog";
 
 // Define the types based on the database schema and actual returned data
 interface Order {
@@ -100,6 +101,9 @@ const Dashboard = () => {
   const [error, setError] = useState<string | null>(null);
   const [runnerBaseFee, setRunnerBaseFee] = useState<number>(10.00);
   const [isUpdatingOrder, setIsUpdatingOrder] = useState(false);
+  const [showPinDialog, setShowPinDialog] = useState(false);
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+  const [isVerifyingPin, setIsVerifyingPin] = useState(false);
   
   // Status styling
   const statusLabels = {
@@ -517,8 +521,47 @@ const Dashboard = () => {
     }
   };
   
-  const handleMarkDelivered = async (orderId: string) => {
-    if (!currentUser) return;
+  const handleMarkDelivered = (orderId: string) => {
+    console.log("Mark Delivered button clicked for order:", orderId);
+    setSelectedOrderId(orderId);
+    setShowPinDialog(true);
+  };
+
+  const handlePinVerification = async (pin: string): Promise<boolean> => {
+    if (!currentUser || !selectedOrderId) return false;
+    
+    try {
+      setIsVerifyingPin(true);
+      
+      // Verify PIN against the order's delivery_pin
+      const { data: orderData, error: orderError } = await supabase
+        .from("orders")
+        .select("delivery_pin")
+        .eq("id", selectedOrderId)
+        .eq("runner_id", currentUser.id)
+        .single();
+      
+      if (orderError) {
+        console.error("Error fetching order PIN:", orderError);
+        return false;
+      }
+      
+      if (!orderData || (orderData as any).delivery_pin !== pin) {
+        return false;
+      }
+      
+      // PIN is correct, proceed with delivery
+      return await completeDelivery(selectedOrderId);
+    } catch (err) {
+      console.error("Error verifying PIN:", err);
+      return false;
+    } finally {
+      setIsVerifyingPin(false);
+    }
+  };
+
+  const completeDelivery = async (orderId: string): Promise<boolean> => {
+    if (!currentUser) return false;
     
     try {
       setIsUpdatingOrder(true);
@@ -604,6 +647,8 @@ const Dashboard = () => {
         fetchOrders();
         setIsUpdatingOrder(false);
       }, 500);
+      
+      return true;
     } catch (err) {
       console.error("Error marking order as delivered:", err);
       toast({
@@ -612,6 +657,7 @@ const Dashboard = () => {
         variant: "destructive"
       });
       setIsUpdatingOrder(false);
+      return false;
     } finally {
       setIsLoading(false);
     }
@@ -1291,6 +1337,17 @@ const Dashboard = () => {
           </CardContent>
         </Card>
       </div>
+      
+      {/* PIN Verification Dialog */}
+      <PinVerificationDialog
+        isOpen={showPinDialog}
+        onClose={() => {
+          setShowPinDialog(false);
+          setSelectedOrderId(null);
+        }}
+        onVerify={handlePinVerification}
+        isVerifying={isVerifyingPin}
+      />
     </div>
   );
 };
