@@ -584,7 +584,7 @@ const OrderDetails = () => {
                       </Button>
                     )}
                     
-                    {order.status === "in_transit" && (
+                    {(order.status === "in_transit" || order.status === "picked_up") && (
                       <Button 
                         onClick={handleMarkDelivered} 
                         disabled={isUpdating} 
