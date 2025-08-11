@@ -11,6 +11,8 @@ import { ChevronLeft, ShoppingBag, MapPin, User, Phone, CreditCard, Clock, Alert
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { CancelOrderDialog } from "@/components/CancelOrderDialog";
+import { PinVerificationDialog } from "@/components/PinVerificationDialog";
+import { PinDisplay } from "@/components/PinDisplay";
 import { getRunnerBaseFee } from "@/lib/utils";
 
 const OrderDetails = () => {
@@ -24,6 +26,8 @@ const OrderDetails = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [showPinDialog, setShowPinDialog] = useState(false);
+  const [isVerifyingPin, setIsVerifyingPin] = useState(false);
   
   // Status styling with modern colors
   const statusLabels = {
@@ -273,10 +277,22 @@ const OrderDetails = () => {
     }
   };
   
-  const handleMarkDelivered = async () => {
-    if (!currentUser || !order) return;
+  const handleMarkDelivered = () => {
+    setShowPinDialog(true);
+  };
+
+  const handlePinVerification = async (enteredPin: string): Promise<boolean> => {
+    if (!currentUser || !order) return false;
     
     try {
+      setIsVerifyingPin(true);
+      
+      // Verify the PIN matches the order's delivery PIN
+      if (enteredPin !== order.delivery_pin) {
+        return false;
+      }
+      
+      // If PIN is correct, proceed with delivery confirmation
       setIsUpdating(true);
       const now = new Date().toISOString();
       
@@ -297,7 +313,7 @@ const OrderDetails = () => {
           order_id: order.id,
           status: "delivered",
           changed_by: currentUser.id,
-          notes: "Order successfully delivered"
+          notes: "Order successfully delivered with PIN verification"
         });
       
       if (historyError) {
@@ -305,9 +321,9 @@ const OrderDetails = () => {
       }
       
       // Create an earning record with configurable base fee
-      const baseFee = await getRunnerBaseFee(); // Get base fee from configuration
-      const tipAmount = 0.00; // Could be calculated or provided by user input
-      const bonusAmount = 0.00; // Could be calculated based on conditions
+      const baseFee = await getRunnerBaseFee();
+      const tipAmount = 0.00;
+      const bonusAmount = 0.00;
       const totalEarned = baseFee + tipAmount + bonusAmount;
       
       const { error: earningsError } = await supabase.from("runner_earnings").insert({
@@ -331,10 +347,7 @@ const OrderDetails = () => {
         delivered_at: now
       });
       
-      toast({
-        title: "Order delivered",
-        description: "Order has been successfully delivered and earnings recorded"
-      });
+      return true;
     } catch (err: any) {
       console.error("Error marking order as delivered:", err);
       toast({
@@ -342,8 +355,10 @@ const OrderDetails = () => {
         description: "Could not mark order as delivered",
         variant: "destructive"
       });
+      return false;
     } finally {
       setIsUpdating(false);
+      setIsVerifyingPin(false);
     }
   };
 
@@ -655,6 +670,15 @@ const OrderDetails = () => {
 
             <Separator className="my-8" />
             
+            {/* Delivery PIN Display - for customers */}
+            {order.delivery_pin && currentUser?.id === order.customer_id && (
+              <div className="space-y-4">
+                <PinDisplay pin={order.delivery_pin} orderNumber={order.order_number} />
+              </div>
+            )}
+
+            {order.delivery_pin && currentUser?.id === order.customer_id && <Separator className="my-8" />}
+            
             {/* Customer Information */}
             <div className="space-y-4">
               <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
@@ -829,6 +853,14 @@ const OrderDetails = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* PIN Verification Dialog */}
+        <PinVerificationDialog
+          isOpen={showPinDialog}
+          onClose={() => setShowPinDialog(false)}
+          onVerify={handlePinVerification}
+          isVerifying={isVerifyingPin}
+        />
       </div>
     </div>
   );
