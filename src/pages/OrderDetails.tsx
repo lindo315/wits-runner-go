@@ -278,6 +278,9 @@ const OrderDetails = () => {
   };
   
   const handleMarkDelivered = () => {
+    console.log("Mark Delivered button clicked");
+    console.log("Current order:", order);
+    console.log("Current user:", currentUser);
     setShowPinDialog(true);
   };
 
