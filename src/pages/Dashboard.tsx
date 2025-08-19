@@ -32,6 +32,7 @@ import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { getRunnerBaseFee } from "@/lib/utils";
 import { RunnerNotifications } from "@/components/RunnerNotifications";
+import { CollectionPinDisplay } from "@/components/CollectionPinDisplay";
 import { PinVerificationDialog } from "@/components/PinVerificationDialog";
 
 // Define the types based on the database schema and actual returned data
@@ -43,6 +44,8 @@ interface Order {
   payment_method: string;
   runner_id: string | null;
   merchant_id?: string;
+  delivery_pin?: string;
+  collection_pin?: string;
   merchant: {
     name: string;
     location: string;
@@ -171,6 +174,8 @@ const Dashboard = () => {
           created_at,
           delivered_at,
           delivery_address_id,
+          delivery_pin,
+          collection_pin,
           merchant:merchant_id (
             name,
             location
@@ -1179,6 +1184,17 @@ const Dashboard = () => {
                                   </div>
                                 </div>
                               </div>
+                              
+                              {/* Collection PIN Display for Active Orders */}
+                              {order.collection_pin && order.status === "picked_up" && (
+                                <div className="pt-4">
+                                  <CollectionPinDisplay 
+                                    pin={order.collection_pin}
+                                    orderNumber={order.order_number}
+                                    merchantName={order.merchant?.name}
+                                  />
+                                </div>
+                              )}
                               
                               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pt-4 border-t">
                                 <div className="text-center sm:text-left">
