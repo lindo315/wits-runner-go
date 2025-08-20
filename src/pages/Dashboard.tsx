@@ -1205,17 +1205,6 @@ const Dashboard = () => {
                                     </div>
                                   )}
                                   
-                                  {/* Mark In Transit button shows for picked up orders */}
-                                  {order.status === "picked_up" && (
-                                    <Button 
-                                      onClick={() => handleMarkInTransit(order.id)}
-                                      size="lg"
-                                      className="bg-purple-600 hover:bg-purple-700 text-white px-4 sm:px-6 w-full sm:w-auto"
-                                    >
-                                      Mark In Transit
-                                    </Button>
-                                  )}
-                                  
                                   {order.status === "in_transit" && (
                                     <Button 
                                       onClick={() => handleMarkDelivered(order.id)}
