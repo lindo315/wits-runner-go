@@ -201,7 +201,7 @@ const Dashboard = () => {
           break;
         case "active":
           query = query
-            .in("status", ["picked_up", "in_transit"])
+            .in("status", ["ready", "picked_up", "in_transit"])
             .eq("runner_id", currentUser.id);
           break;
         case "completed":
