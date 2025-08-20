@@ -107,8 +107,6 @@ const Dashboard = () => {
   const [showPinDialog, setShowPinDialog] = useState(false);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [isVerifyingPin, setIsVerifyingPin] = useState(false);
-  const [showCollectionPinDialog, setShowCollectionPinDialog] = useState(false);
-  const [verifiedCollectionOrders, setVerifiedCollectionOrders] = useState<Set<string>>(new Set());
   
   // Status styling
   const statusLabels = {
@@ -454,50 +452,6 @@ const Dashboard = () => {
     }
   };
   
-  const handleCollectionPinVerification = (orderId: string) => {
-    setSelectedOrderId(orderId);
-    setShowCollectionPinDialog(true);
-  };
-
-  const handleVerifyCollectionPin = async (pin: string): Promise<boolean> => {
-    if (!currentUser || !selectedOrderId) return false;
-    
-    try {
-      setIsVerifyingPin(true);
-      
-      // Verify PIN against the order's collection_pin
-      const { data: orderData, error: orderError } = await supabase
-        .from("orders")
-        .select("collection_pin")
-        .eq("id", selectedOrderId)
-        .eq("runner_id", currentUser.id)
-        .single();
-      
-      if (orderError) {
-        console.error("Error fetching order collection PIN:", orderError);
-        return false;
-      }
-      
-      if (!orderData || (orderData as any).collection_pin !== pin) {
-        return false;
-      }
-      
-      // PIN is correct, mark as verified
-      setVerifiedCollectionOrders(prev => new Set(prev).add(selectedOrderId));
-      
-      toast({
-        title: "Collection verified",
-        description: "PIN verified successfully. You can now mark the order as in transit."
-      });
-      
-      return true;
-    } catch (err) {
-      console.error("Error verifying collection PIN:", err);
-      return false;
-    } finally {
-      setIsVerifyingPin(false);
-    }
-  };
 
   // Order status update handlers
   const handleMarkInTransit = async (orderId: string) => {
@@ -1240,26 +1194,19 @@ const Dashboard = () => {
                                 </div>
                                 
                                 <div className="flex flex-col sm:flex-row gap-2">
-                                  {/* Show collection PIN for picked up orders that haven't been verified */}
-                                  {order.status === "picked_up" && !verifiedCollectionOrders.has(order.id) && order.collection_pin && (
+                                  {/* Show collection PIN for picked up orders */}
+                                  {order.status === "picked_up" && order.collection_pin && (
                                     <div className="w-full">
                                       <CollectionPinDisplay 
                                         pin={order.collection_pin}
                                         orderNumber={order.order_number}
                                         merchantName={order.merchant?.name}
                                       />
-                                      <Button 
-                                        onClick={() => handleCollectionPinVerification(order.id)}
-                                        size="lg"
-                                        className="bg-orange-600 hover:bg-orange-700 text-white px-4 sm:px-6 w-full mt-3"
-                                      >
-                                        Verify Collection with Merchant
-                                      </Button>
                                     </div>
                                   )}
                                   
-                                  {/* Mark In Transit button only shows after collection PIN has been verified */}
-                                  {order.status === "picked_up" && verifiedCollectionOrders.has(order.id) && (
+                                  {/* Mark In Transit button shows for picked up orders */}
+                                  {order.status === "picked_up" && (
                                     <Button 
                                       onClick={() => handleMarkInTransit(order.id)}
                                       size="lg"
@@ -1418,17 +1365,6 @@ const Dashboard = () => {
           setSelectedOrderId(null);
         }}
         onVerify={handlePinVerification}
-        isVerifying={isVerifyingPin}
-      />
-      
-      {/* PIN Verification Dialog for Collection */}
-      <PinVerificationDialog
-        isOpen={showCollectionPinDialog}
-        onClose={() => {
-          setShowCollectionPinDialog(false);
-          setSelectedOrderId(null);
-        }}
-        onVerify={handleVerifyCollectionPin}
         isVerifying={isVerifyingPin}
       />
     </div>
