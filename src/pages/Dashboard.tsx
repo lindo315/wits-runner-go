@@ -107,6 +107,7 @@ const Dashboard = () => {
   const [showPinDialog, setShowPinDialog] = useState(false);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [isVerifyingPin, setIsVerifyingPin] = useState(false);
+  const [isVerifyingCollection, setIsVerifyingCollection] = useState(false);
   
   // Status styling
   const statusLabels = {
@@ -680,6 +681,39 @@ const Dashboard = () => {
         : "You won't receive new delivery requests"
     });
   };
+
+  const handleVerifyCollection = async (orderId: string) => {
+    try {
+      setIsVerifyingCollection(true);
+      
+      // Update order status to in_transit after collection verification
+      const { error } = await supabase
+        .from('orders')
+        .update({ 
+          status: 'in_transit',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', orderId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Collection Verified",
+        description: "Order collected from merchant. You can now mark it as in transit.",
+      });
+
+      fetchOrders();
+    } catch (error) {
+      console.error('Error verifying collection:', error);
+      toast({
+        title: "Error",
+        description: "Failed to verify collection. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsVerifyingCollection(false);
+    }
+  };
   
   // Set up real-time subscriptions
   useEffect(() => {
@@ -1194,13 +1228,15 @@ const Dashboard = () => {
                                 </div>
                                 
                                 <div className="flex flex-col sm:flex-row gap-2">
-                                  {/* Show collection PIN for picked up orders - NO button until merchant verifies */}
+                                  {/* Show collection PIN for picked up orders with verification */}
                                   {order.status === "picked_up" && order.collection_pin && (
                                     <div className="w-full mb-4">
                                       <CollectionPinDisplay 
                                         pin={order.collection_pin}
                                         orderNumber={order.order_number}
                                         merchantName={order.merchant?.name}
+                                        onVerify={() => handleVerifyCollection(order.id)}
+                                        isVerifying={isVerifyingCollection}
                                       />
                                     </div>
                                   )}

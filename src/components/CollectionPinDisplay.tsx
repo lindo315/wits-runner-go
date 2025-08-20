@@ -9,12 +9,16 @@ interface CollectionPinDisplayProps {
   pin: string;
   orderNumber: string;
   merchantName?: string;
+  onVerify?: () => void;
+  isVerifying?: boolean;
 }
 
 export const CollectionPinDisplay: React.FC<CollectionPinDisplayProps> = ({ 
   pin, 
   orderNumber, 
-  merchantName 
+  merchantName,
+  onVerify,
+  isVerifying = false
 }) => {
   const { toast } = useToast();
 
