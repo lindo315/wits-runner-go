@@ -39,7 +39,7 @@ import { CollectionPinDisplay } from "@/components/CollectionPinDisplay";
 interface Order {
   id: string;
   order_number: string;
-  status: "pending" | "ready" | "picked_up" | "verified" | "in_transit" | "delivered";
+  status: "pending" | "ready" | "picked_up" | "in_transit" | "delivered";
   payment_status: "pending" | "paid" | "failed" | "refunded";
   payment_method: string;
   runner_id: string | null;
@@ -113,7 +113,6 @@ const Dashboard = () => {
     pending: "Pending",
     ready: "Ready",
     picked_up: "Picked Up",
-    verified: "Verified",
     in_transit: "In Transit",
     delivered: "Delivered"
   };
@@ -122,7 +121,6 @@ const Dashboard = () => {
     pending: "bg-yellow-100 text-yellow-800",
     ready: "bg-amber-100 text-amber-800",
     picked_up: "bg-blue-100 text-blue-800",
-    verified: "bg-indigo-100 text-indigo-800",
     in_transit: "bg-purple-100 text-purple-800",
     delivered: "bg-green-100 text-green-800"
   };
@@ -202,7 +200,7 @@ const Dashboard = () => {
           break;
         case "active":
           query = query
-            .in("status", ["picked_up", "verified", "in_transit"])
+            .in("status", ["picked_up", "in_transit"])
             .eq("runner_id", currentUser.id);
           break;
         case "completed":
@@ -389,7 +387,7 @@ const Dashboard = () => {
         .from("orders")
         .select("*", { count: "exact", head: true })
         .eq("runner_id", currentUser.id)
-        .in("status", ["picked_up", "verified", "in_transit"]);
+        .in("status", ["picked_up", "in_transit"]);
       
       if (countError) {
         console.error("Error checking active orders:", countError);
@@ -764,7 +762,7 @@ const Dashboard = () => {
   
   // Calculate counts for each order status
   const activeOrdersCount = orders.filter(order => 
-    order.status === "picked_up" || order.status === "verified" || order.status === "in_transit").length;
+    order.status === "picked_up" || order.status === "in_transit").length;
   
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
@@ -1198,7 +1196,7 @@ const Dashboard = () => {
                                 <div className="flex flex-col sm:flex-row gap-2">
                                   {/* Show collection PIN for picked up orders */}
                                   {order.status === "picked_up" && order.collection_pin && (
-                                    <div className="w-full">
+                                    <div className="w-full mb-4">
                                       <CollectionPinDisplay 
                                         pin={order.collection_pin}
                                         orderNumber={order.order_number}
@@ -1207,8 +1205,8 @@ const Dashboard = () => {
                                     </div>
                                   )}
                                   
-                                  {/* Mark In Transit button shows for verified orders */}
-                                  {order.status === "verified" && (
+                                  {/* Mark In Transit button shows for picked up orders */}
+                                  {order.status === "picked_up" && (
                                     <Button 
                                       onClick={() => handleMarkInTransit(order.id)}
                                       size="lg"
