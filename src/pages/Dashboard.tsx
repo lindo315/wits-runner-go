@@ -686,11 +686,11 @@ const Dashboard = () => {
     try {
       setIsVerifyingCollection(true);
       
-      // Update order status to in_transit after collection verification
+      // Update order status to picked_up after collection verification
       const { error } = await supabase
         .from('orders')
         .update({ 
-          status: 'in_transit',
+          status: 'picked_up',
           updated_at: new Date().toISOString()
         })
         .eq('id', orderId);
@@ -1228,8 +1228,8 @@ const Dashboard = () => {
                                 </div>
                                 
                                 <div className="flex flex-col sm:flex-row gap-2">
-                                  {/* Show collection PIN for picked up orders with verification */}
-                                  {order.status === "picked_up" && order.collection_pin && (
+                                  {/* Show collection PIN for ready orders */}
+                                  {order.status === "ready" && order.collection_pin && (
                                     <div className="w-full mb-4">
                                       <CollectionPinDisplay 
                                         pin={order.collection_pin}
@@ -1239,6 +1239,17 @@ const Dashboard = () => {
                                         isVerifying={isVerifyingCollection}
                                       />
                                     </div>
+                                  )}
+                                  
+                                  {/* Mark In Transit button for picked up orders */}
+                                  {order.status === "picked_up" && (
+                                    <Button 
+                                      onClick={() => handleMarkInTransit(order.id)}
+                                      size="lg"
+                                      className="bg-purple-600 hover:bg-purple-700 text-white px-4 sm:px-6 w-full sm:w-auto"
+                                    >
+                                      Mark In Transit
+                                    </Button>
                                   )}
                                   
                                   {order.status === "in_transit" && (
