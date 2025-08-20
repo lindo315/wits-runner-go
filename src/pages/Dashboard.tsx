@@ -191,10 +191,10 @@ const Dashboard = () => {
       
       switch (activeTab) {
         case "available":
-          // Updated to include both 'ready' and 'pending' status orders that are not assigned to runners
-          console.log("Querying available orders: status in [ready, pending], runner_id=null");
+          // Only show orders that have been accepted by merchants (status = 'ready')
+          console.log("Querying available orders: status = 'ready', runner_id=null");
           query = query
-            .in("status", ["ready", "pending"])
+            .eq("status", "ready")
             .is("runner_id", null);
           break;
         case "active":
@@ -208,7 +208,7 @@ const Dashboard = () => {
             .eq("runner_id", currentUser.id);
           break;
         default:
-          query = query.in("status", ["ready", "pending"]);
+          query = query.eq("status", "ready");
       }
       
       const { data, error: fetchError } = await query.order("created_at", { ascending: false });
@@ -252,9 +252,9 @@ const Dashboard = () => {
           const { data: availableOrders } = await supabase
             .from("orders")
             .select("id, status, runner_id")
-            .in("status", ["ready", "pending"]);
+            .eq("status", "ready");
             
-          console.log("All ready/pending orders:", availableOrders);
+          console.log("All ready orders:", availableOrders);
         }
       }
       
