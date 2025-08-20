@@ -107,6 +107,8 @@ const Dashboard = () => {
   const [showPinDialog, setShowPinDialog] = useState(false);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [isVerifyingPin, setIsVerifyingPin] = useState(false);
+  const [showCollectionPinDialog, setShowCollectionPinDialog] = useState(false);
+  const [verifiedCollectionOrders, setVerifiedCollectionOrders] = useState<Set<string>>(new Set());
   
   // Status styling
   const statusLabels = {
@@ -668,6 +670,51 @@ const Dashboard = () => {
     }
   };
   
+  const handleVerifyCollectionPin = (orderId: string) => {
+    setSelectedOrderId(orderId);
+    setShowCollectionPinDialog(true);
+  };
+  
+  const handleCollectionPinVerification = async (pin: string): Promise<boolean> => {
+    if (!currentUser || !selectedOrderId) return false;
+    
+    try {
+      setIsVerifyingPin(true);
+      
+      // Verify PIN against the order's collection_pin
+      const { data: orderData, error: orderError } = await supabase
+        .from("orders")
+        .select("collection_pin")
+        .eq("id", selectedOrderId)
+        .eq("runner_id", currentUser.id)
+        .single();
+      
+      if (orderError) {
+        console.error("Error fetching order collection PIN:", orderError);
+        return false;
+      }
+      
+      if (!orderData || (orderData as any).collection_pin !== pin) {
+        return false;
+      }
+      
+      // PIN is correct, mark collection as verified
+      setVerifiedCollectionOrders(prev => new Set([...prev, selectedOrderId]));
+      
+      toast({
+        title: "Collection verified",
+        description: "You can now mark the order as in transit"
+      });
+      
+      return true;
+    } catch (err) {
+      console.error("Error verifying collection PIN:", err);
+      return false;
+    } finally {
+      setIsVerifyingPin(false);
+    }
+  };
+  
   // Handle runner availability toggle
   const handleStatusChange = (checked: boolean) => {
     setIsAvailable(checked);
@@ -1203,7 +1250,17 @@ const Dashboard = () => {
                                 </div>
                                 
                                 <div className="flex flex-col sm:flex-row gap-2">
-                                  {order.status === "picked_up" && (
+                                  {order.status === "picked_up" && !verifiedCollectionOrders.has(order.id) && order.collection_pin && (
+                                    <Button 
+                                      onClick={() => handleVerifyCollectionPin(order.id)}
+                                      size="lg"
+                                      className="bg-orange-600 hover:bg-orange-700 text-white px-4 sm:px-6 w-full sm:w-auto"
+                                    >
+                                      Verify Collection PIN
+                                    </Button>
+                                  )}
+                                  
+                                  {order.status === "picked_up" && (verifiedCollectionOrders.has(order.id) || !order.collection_pin) && (
                                     <Button 
                                       onClick={() => handleMarkInTransit(order.id)}
                                       size="lg"
@@ -1362,6 +1419,17 @@ const Dashboard = () => {
           setSelectedOrderId(null);
         }}
         onVerify={handlePinVerification}
+        isVerifying={isVerifyingPin}
+      />
+      
+      {/* Collection PIN Verification Dialog */}
+      <PinVerificationDialog
+        isOpen={showCollectionPinDialog}
+        onClose={() => {
+          setShowCollectionPinDialog(false);
+          setSelectedOrderId(null);
+        }}
+        onVerify={handleCollectionPinVerification}
         isVerifying={isVerifyingPin}
       />
     </div>
