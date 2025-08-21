@@ -116,38 +116,38 @@ export const MobileOrderCard = ({
   return (
     <div className="food-order-card animate-fade-in-up">
       {/* Animated Top Border */}
-      <div className="h-1 bg-gradient-to-r from-orange-500 via-amber-500 to-orange-500 bg-[length:200%_100%] animate-shimmer" />
+      <div className="h-0.5 bg-gradient-to-r from-orange-500 via-amber-500 to-orange-500 bg-[length:200%_100%] animate-shimmer" />
 
-      <div className="p-6">
+      <div className="p-3">
         {/* Header with Enhanced Visual Hierarchy */}
-        <div className="flex items-start justify-between mb-6">
-          <div className="flex items-center gap-4">
+        <div className="flex items-start justify-between mb-3">
+          <div className="flex items-center gap-2">
             {/* Status Icon with Glow Effect */}
             <div
               className={cn(
-                "p-3 rounded-2xl bg-gradient-to-br shadow-lg",
+                "p-2 rounded-lg bg-gradient-to-br shadow-md",
                 getStatusGradient(order.status)
               )}
             >
-              <StatusIcon className="h-6 w-6 text-white" />
+              <StatusIcon className="h-4 w-4 text-white" />
             </div>
 
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1">
-                <span className="font-mono text-lg font-bold text-gray-900">
+                <span className="font-mono text-sm font-bold text-gray-900">
                   #{order.order_number}
                 </span>
                 <div
                   className={cn(
-                    "px-3 py-1 rounded-full text-xs font-semibold border",
+                    "px-2 py-0.5 rounded-full text-xs font-semibold border",
                     getStatusColor(order.status)
                   )}
                 >
                   {getStatusDisplay(order.status)}
                 </div>
               </div>
-              <div className="flex items-center gap-2 text-sm text-gray-500">
-                <Clock className="h-4 w-4" />
+              <div className="flex items-center gap-1 text-xs text-gray-500">
+                <Clock className="h-3 w-3" />
                 <span>
                   {format(new Date(order.created_at), "MMM d, h:mm a")}
                 </span>
@@ -156,44 +156,38 @@ export const MobileOrderCard = ({
           </div>
 
           {/* Priority Badge */}
-          <div className="flex flex-col items-end gap-2">
-            <Badge className="bg-gradient-to-r from-orange-500 to-amber-500 text-white px-3 py-1 text-xs font-semibold border-0 shadow-lg">
-              <Sparkles className="h-3 w-3 mr-1" />
-              Priority
-            </Badge>
-          </div>
+          <Badge className="bg-gradient-to-r from-orange-500 to-amber-500 text-white px-2 py-0.5 text-xs font-semibold border-0 shadow-md">
+            <Sparkles className="h-3 w-3 mr-1" />
+          </Badge>
         </div>
 
         {/* Amount Section - More Prominent */}
-        <div className="mb-6 p-4 bg-gradient-to-br from-orange-50 to-amber-50 rounded-2xl border border-orange-100">
+        <div className="mb-3 p-2 bg-gradient-to-br from-orange-50 to-amber-50 rounded-lg border border-orange-100">
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-2xl font-bold bg-gradient-to-r from-orange-600 to-amber-600 bg-clip-text text-transparent">
+              <div className="text-lg font-bold bg-gradient-to-r from-orange-600 to-amber-600 bg-clip-text text-transparent">
                 R{order.total_amount.toFixed(2)}
               </div>
-              <div className="text-sm text-gray-600 mt-1">Order Total</div>
+              <div className="text-xs text-gray-600">Order Total</div>
             </div>
             <div className="text-right">
-              <div className="text-lg font-bold text-green-600">R10.00</div>
+              <div className="text-sm font-bold text-green-600">R10.00</div>
               <div className="text-xs text-gray-500">You'll Earn</div>
             </div>
           </div>
         </div>
 
         {/* Enhanced Location Cards */}
-        <div className="space-y-4 mb-6">
+        <div className="space-y-2 mb-3">
           {/* Pickup Location */}
-          <div className="p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl border border-blue-100">
-            <div className="flex items-start gap-3">
-              <div className="p-2 bg-blue-100 rounded-xl">
-                <Package className="h-5 w-5 text-blue-600" />
+          <div className="p-2 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg border border-blue-100">
+            <div className="flex items-center gap-2">
+              <div className="p-1 bg-blue-100 rounded-lg">
+                <Package className="h-3 w-3 text-blue-600" />
               </div>
               <div className="flex-1">
-                <div className="text-xs font-semibold text-blue-700 mb-1 uppercase tracking-wide">
-                  Pickup from
-                </div>
-                <div className="text-sm font-bold text-gray-900 mb-1">
-                  {order.merchant?.name || "Unknown Merchant"}
+                <div className="text-xs font-semibold text-blue-700 mb-0.5">
+                  From: {order.merchant?.name || "Unknown"}
                 </div>
                 <div className="text-xs text-gray-600">
                   {order.merchant?.location || "Location not specified"}
@@ -208,17 +202,14 @@ export const MobileOrderCard = ({
 
           {/* Delivery Location */}
           {order.customer_addresses && (
-            <div className="p-4 bg-gradient-to-br from-purple-50 to-violet-50 rounded-2xl border border-purple-100">
-              <div className="flex items-start gap-3">
-                <div className="p-2 bg-purple-100 rounded-xl">
-                  <MapPin className="h-5 w-5 text-purple-600" />
+            <div className="p-2 bg-gradient-to-br from-purple-50 to-violet-50 rounded-lg border border-purple-100">
+              <div className="flex items-center gap-2">
+                <div className="p-1 bg-purple-100 rounded-lg">
+                  <MapPin className="h-3 w-3 text-purple-600" />
                 </div>
                 <div className="flex-1">
-                  <div className="text-xs font-semibold text-purple-700 mb-1 uppercase tracking-wide">
-                    Deliver to
-                  </div>
-                  <div className="text-sm font-bold text-gray-900 mb-1">
-                    {order.customer_addresses.building_name}
+                  <div className="text-xs font-semibold text-purple-700 mb-0.5">
+                    To: {order.customer_addresses.building_name}
                   </div>
                   <div className="text-xs text-gray-600">
                     Room {order.customer_addresses.room_number}
@@ -226,7 +217,7 @@ export const MobileOrderCard = ({
                 </div>
                 <div className="flex items-center gap-1 text-xs text-purple-600">
                   <Timer className="h-3 w-3" />
-                  <span>~15min</span>
+                  <span>15min</span>
                 </div>
               </div>
             </div>
@@ -234,13 +225,13 @@ export const MobileOrderCard = ({
         </div>
 
         {/* Enhanced Action Buttons */}
-        <div className="flex items-center gap-3 pt-4 border-t border-gray-100">
+        <div className="flex items-center gap-2 pt-2 border-t border-gray-100">
           {showActionButton && onAccept ? (
             <Button
               onClick={() => onAccept(order.id)}
-              className="flex-1 h-12 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+              className="flex-1 h-8 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-semibold rounded-lg shadow-md transition-all duration-300"
             >
-              <Zap className="h-5 w-5 mr-2" />
+              <Zap className="h-3 w-3 mr-1" />
               {actionButtonText}
             </Button>
           ) : (
@@ -251,28 +242,27 @@ export const MobileOrderCard = ({
             variant="outline"
             size="sm"
             onClick={() => onViewDetails(order.id)}
-            className="h-12 px-6 border-2 border-orange-200 text-orange-600 hover:bg-orange-50 hover:border-orange-300 font-semibold rounded-xl transition-all duration-300 transform hover:scale-105"
+            className="h-8 px-3 border border-orange-200 text-orange-600 hover:bg-orange-50 font-semibold rounded-lg transition-all duration-300"
           >
-            <DollarSign className="h-4 w-4 mr-2" />
             Details
-            <ChevronRight className="h-4 w-4 ml-2" />
+            <ChevronRight className="h-3 w-3 ml-1" />
           </Button>
         </div>
 
         {/* Quick Stats Row */}
-        <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-100">
-          <div className="flex items-center gap-4 text-xs text-gray-500">
+        <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-100">
+          <div className="flex items-center gap-3 text-xs text-gray-500">
             <div className="flex items-center gap-1">
               <Package className="h-3 w-3" />
               <span>2 items</span>
             </div>
             <div className="flex items-center gap-1">
               <Timer className="h-3 w-3" />
-              <span>15 min</span>
+              <span>15min</span>
             </div>
             <div className="flex items-center gap-1">
               <MapPin className="h-3 w-3" />
-              <span>1.2 km</span>
+              <span>1.2km</span>
             </div>
           </div>
 

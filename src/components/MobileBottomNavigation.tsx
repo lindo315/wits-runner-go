@@ -56,12 +56,12 @@ export const MobileBottomNavigation = ({
 
   return (
     <nav className="mobile-bottom-nav">
-      <div className="px-4 py-3">
+      <div className="px-3 py-2">
         {/* Quick Stats Bar */}
-        <div className="flex items-center justify-between mb-3 px-2">
-          <div className="flex items-center gap-3 text-xs text-gray-500">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2 text-xs text-gray-500">
             <div className="flex items-center gap-1">
-              <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse" />
+              <div className="w-1.5 h-1.5 bg-orange-500 rounded-full animate-pulse" />
               <span>Online</span>
             </div>
             <div className="flex items-center gap-1">
@@ -77,7 +77,7 @@ export const MobileBottomNavigation = ({
         </div>
 
         {/* Enhanced Navigation */}
-        <div className="flex gap-2">
+        <div className="flex gap-1">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive =
@@ -92,17 +92,17 @@ export const MobileBottomNavigation = ({
                 key={item.id}
                 onClick={() => onTabChange(item.id)}
                 className={cn(
-                  "flex-1 flex flex-col items-center gap-2 py-3 px-2 rounded-2xl transition-all duration-300 relative overflow-hidden mobile-tap-target mobile-no-select border-2",
+                  "flex-1 flex flex-col items-center gap-1 py-2 px-1 rounded-lg transition-all duration-300 relative overflow-hidden mobile-tap-target mobile-no-select border",
                   isActive
-                    ? `bg-gradient-to-br ${item.bgColor} ${item.borderColor} shadow-lg transform scale-105`
-                    : "bg-white hover:bg-gray-50 border-gray-200 hover:border-gray-300 hover:shadow-md"
+                    ? `bg-gradient-to-br ${item.bgColor} ${item.borderColor} shadow-md`
+                    : "bg-white hover:bg-gray-50 border-gray-200 hover:border-gray-300"
                 )}
               >
                 {/* Active indicator */}
                 {isActive && (
                   <div
                     className={cn(
-                      "absolute top-0 left-0 right-0 h-1 bg-gradient-to-r",
+                      "absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r",
                       item.color
                     )}
                   />
@@ -111,59 +111,35 @@ export const MobileBottomNavigation = ({
                 {/* Icon with enhanced styling */}
                 <div
                   className={cn(
-                    "p-2 rounded-xl transition-all duration-300 relative",
+                    "p-1.5 rounded-lg transition-all duration-300 relative",
                     isActive
-                      ? `bg-gradient-to-br ${item.color} shadow-lg`
+                      ? `bg-gradient-to-br ${item.color} shadow-md`
                       : item.iconBg
                   )}
                 >
                   <Icon
                     className={cn(
-                      "h-5 w-5 transition-all duration-300",
+                      "h-4 w-4 transition-all duration-300",
                       isActive ? "text-white" : item.iconColor
                     )}
                   />
-
-                  {/* Pulse effect for active tab */}
-                  {isActive && (
-                    <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-white/20 to-transparent animate-pulse" />
-                  )}
                 </div>
 
                 {/* Content */}
                 <div className="flex flex-col items-center text-center">
                   <span
                     className={cn(
-                      "text-xs font-bold transition-all duration-300",
+                      "text-xs font-semibold transition-all duration-300",
                       isActive ? "text-gray-900" : "text-gray-600"
                     )}
                   >
                     {item.label}
                   </span>
-                  <span
-                    className={cn(
-                      "text-xs transition-all duration-300",
-                      isActive ? "text-gray-600" : "text-gray-400"
-                    )}
-                  >
-                    {item.description}
-                  </span>
                 </div>
-
-                {/* Hover effect overlay */}
-                {!isActive && (
-                  <div className="absolute inset-0 bg-gradient-to-br from-orange-500/5 to-amber-500/5 opacity-0 hover:opacity-100 transition-opacity duration-300 rounded-2xl" />
-                )}
-
-                {/* Active glow effect */}
-                {isActive && (
-                  <div className="absolute inset-0 bg-gradient-to-br from-orange-500/10 to-amber-500/10 rounded-2xl animate-pulse" />
-                )}
               </button>
             );
           })}
         </div>
-
       </div>
     </nav>
   );
