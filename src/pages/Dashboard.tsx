@@ -40,6 +40,7 @@ import { MobileTabNavigation } from "@/components/MobileTabNavigation";
 import { MobileBottomNavigation } from "@/components/MobileBottomNavigation";
 import { MobileOrderCard } from "@/components/MobileOrderCard";
 import { MobileSearchBar } from "@/components/MobileSearchBar";
+import { MobileEarningsCard } from "@/components/MobileEarningsCard";
 
 // Define the types based on the database schema and actual returned data
 interface Order {
@@ -817,15 +818,18 @@ const Dashboard = () => {
   // Mobile Layout
   if (isMobile) {
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex flex-col">
         <MobileHeader 
-          title="My Orders"
+          title="Runner Dashboard"
           onNotificationClick={() => setActiveTab("notifications")}
           hasNotifications={false}
+          showAvailabilityToggle={activeTab === "available"}
+          isAvailable={isAvailable}
+          onAvailabilityChange={setIsAvailable}
         />
         
         <MobileSearchBar 
-          placeholder="Search orders..."
+          placeholder="Search orders, merchants..."
           value={searchQuery}
           onChange={setSearchQuery}
         />
@@ -838,46 +842,57 @@ const Dashboard = () => {
           completedCount={orders.filter(o => o.status === "delivered" && o.runner_id === currentUser?.id).length}
         />
         
-        {/* Mobile Available Orders Toggle */}
-        {activeTab === "available" && (
-          <div className="px-4 py-3 bg-white border-b">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="available-toggle" className="text-sm font-medium">
-                Available for orders
-              </Label>
-              <Switch
-                id="available-toggle"
-                checked={isAvailable}
-                onCheckedChange={setIsAvailable}
-              />
-            </div>
-          </div>
-        )}
-        
         {/* Mobile Content */}
         <div className="flex-1 overflow-y-auto pb-20">
           {activeTab === "available" && (
-            <div className="py-2">
+            <div className="pb-2">
+              {!isAvailable && (
+                <div className="mx-4 mt-4 mb-2 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+                  <div className="flex items-center gap-3">
+                    <AlertCircle className="h-5 w-5 text-amber-600" />
+                    <div>
+                      <p className="text-amber-800 font-medium text-sm">You're currently unavailable</p>
+                      <p className="text-amber-700 text-xs">Toggle availability above to start accepting orders</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
               {isLoading && (
-                <div className="text-center py-8">
-                  <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
-                  <p className="text-gray-600">Loading orders...</p>
+                <div className="text-center py-12">
+                  <div className="animate-spin h-10 w-10 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
+                  <p className="text-gray-600 font-medium">Loading available orders...</p>
+                  <p className="text-gray-500 text-sm">Finding the best opportunities</p>
                 </div>
               )}
               
               {error && (
-                <div className="mx-4 my-2 p-4 bg-red-50 border border-red-200 rounded-lg">
-                  <p className="text-red-600 text-sm">{error}</p>
+                <div className="mx-4 my-4 p-4 bg-red-50 border border-red-200 rounded-xl">
+                  <div className="flex items-center gap-3">
+                    <AlertCircle className="h-5 w-5 text-red-600" />
+                    <div>
+                      <p className="text-red-800 font-medium text-sm">Unable to load orders</p>
+                      <p className="text-red-700 text-xs">{error}</p>
+                    </div>
+                  </div>
                 </div>
               )}
               
-              {!isLoading && !error && filteredOrders.length === 0 && (
-                <div className="text-center py-8 px-4">
-                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <ShoppingBag className="h-8 w-8 text-gray-400" />
+              {!isLoading && !error && filteredOrders.filter(order => order.status === "ready" && !order.runner_id).length === 0 && (
+                <div className="text-center py-12 px-4">
+                  <div className="w-20 h-20 bg-gradient-to-br from-primary/10 to-blue-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                    <Zap className="h-10 w-10 text-primary" />
                   </div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No available orders</h3>
-                  <p className="text-gray-500 text-sm">Check back soon for new opportunities</p>
+                  <h3 className="text-xl font-bold text-gray-900 mb-2">No orders available</h3>
+                  <p className="text-gray-600 text-sm mb-6">New delivery opportunities will appear here</p>
+                  <Button 
+                    onClick={handleManualRefresh}
+                    variant="outline"
+                    className="border-primary text-primary hover:bg-primary hover:text-white"
+                  >
+                    <RefreshCcw className="h-4 w-4 mr-2" />
+                    Refresh Orders
+                  </Button>
                 </div>
               )}
               
@@ -889,16 +904,32 @@ const Dashboard = () => {
                     order={order}
                     onAccept={handleAcceptOrder}
                     onViewDetails={(orderId) => navigate(`/order-details/${orderId}`)}
-                    showActionButton={true}
-                    actionButtonText="Accept"
-                    statusColor="bg-purple-100 text-purple-800"
+                    showActionButton={isAvailable}
+                    actionButtonText="Accept Order"
                   />
                 ))}
             </div>
           )}
           
           {activeTab === "active" && (
-            <div className="py-2">
+            <div className="pb-2">
+              {isLoading && (
+                <div className="text-center py-12">
+                  <div className="animate-spin h-10 w-10 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+                  <p className="text-gray-600 font-medium">Loading active orders...</p>
+                </div>
+              )}
+              
+              {!isLoading && filteredOrders.filter(order => ["ready", "picked_up", "in_transit"].includes(order.status) && order.runner_id === currentUser?.id).length === 0 && (
+                <div className="text-center py-12 px-4">
+                  <div className="w-20 h-20 bg-gradient-to-br from-blue-100 to-blue-200 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                    <ArrowRightCircle className="h-10 w-10 text-blue-600" />
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-900 mb-2">No active orders</h3>
+                  <p className="text-gray-600 text-sm">Your accepted orders will appear here</p>
+                </div>
+              )}
+              
               {filteredOrders
                 .filter(order => ["ready", "picked_up", "in_transit"].includes(order.status) && order.runner_id === currentUser?.id)
                 .map(order => (
@@ -906,16 +937,23 @@ const Dashboard = () => {
                     key={order.id}
                     order={order}
                     onViewDetails={(orderId) => navigate(`/order-details/${orderId}`)}
-                    statusColor={order.status === "ready" ? "bg-yellow-100 text-yellow-800" : 
-                                order.status === "picked_up" ? "bg-blue-100 text-blue-800" : 
-                                "bg-purple-100 text-purple-800"}
                   />
                 ))}
             </div>
           )}
           
           {activeTab === "completed" && (
-            <div className="py-2">
+            <div className="pb-2">
+              {!isLoading && filteredOrders.filter(order => order.status === "delivered" && order.runner_id === currentUser?.id).length === 0 && (
+                <div className="text-center py-12 px-4">
+                  <div className="w-20 h-20 bg-gradient-to-br from-green-100 to-green-200 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                    <CheckCircle2 className="h-10 w-10 text-green-600" />
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-900 mb-2">No completed orders</h3>
+                  <p className="text-gray-600 text-sm">Your delivery history will appear here</p>
+                </div>
+              )}
+              
               {filteredOrders
                 .filter(order => order.status === "delivered" && order.runner_id === currentUser?.id)
                 .map(order => (
@@ -923,61 +961,13 @@ const Dashboard = () => {
                     key={order.id}
                     order={order}
                     onViewDetails={(orderId) => navigate(`/order-details/${orderId}`)}
-                    statusColor="bg-green-100 text-green-800"
                   />
                 ))}
             </div>
           )}
           
-          {activeTab === "profile" && (
-            <div className="p-4 space-y-4">
-              {/* Earnings Summary */}
-              <div className="bg-white rounded-lg p-4 shadow-sm">
-                <h3 className="text-lg font-semibold mb-4">Today's Earnings</h3>
-                <div className="text-2xl font-bold text-green-600 mb-2">
-                  ${earnings.today.amount.toFixed(2)}
-                </div>
-                <p className="text-sm text-gray-600">{earnings.today.count} deliveries completed</p>
-              </div>
-              
-              {/* Weekly Stats */}
-              <div className="bg-white rounded-lg p-4 shadow-sm">
-                <h3 className="text-lg font-semibold mb-4">This Week</h3>
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Earnings:</span>
-                    <span className="font-medium">${earnings.weekly.amount.toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Deliveries:</span>
-                    <span className="font-medium">{earnings.weekly.count}</span>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Settings */}
-              <div className="bg-white rounded-lg p-4 shadow-sm">
-                <h3 className="text-lg font-semibold mb-4">Settings</h3>
-                <div className="space-y-4">
-                  <Button 
-                    variant="outline" 
-                    className="w-full justify-start"
-                    onClick={() => navigate("/profile")}
-                  >
-                    <User className="h-4 w-4 mr-2" />
-                    Profile Settings
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    className="w-full justify-start"
-                    onClick={() => navigate("/earnings")}
-                  >
-                    <TrendingUp className="h-4 w-4 mr-2" />
-                    View Earnings
-                  </Button>
-                </div>
-              </div>
-            </div>
+          {activeTab === "earnings" && (
+            <MobileEarningsCard earnings={earnings} />
           )}
           
           {activeTab === "notifications" && (
@@ -988,10 +978,18 @@ const Dashboard = () => {
         </div>
         
         <MobileBottomNavigation 
-          activeTab={activeTab}
+          activeTab={activeTab === "earnings" ? "profile" : activeTab}
           onTabChange={(tab) => {
             if (tab === "create") {
-              // Handle create action - could open a modal or navigate
+              // Handle create action
+              toast({
+                title: "Coming Soon",
+                description: "Order creation feature will be available soon",
+              });
+              return;
+            }
+            if (tab === "profile") {
+              setActiveTab("earnings");
               return;
             }
             setActiveTab(tab);
