@@ -1,4 +1,18 @@
-import { ChevronRight, MapPin, Package, Clock, User, CheckCircle2, AlertCircle } from "lucide-react";
+import {
+  ChevronRight,
+  MapPin,
+  Package,
+  Clock,
+  User,
+  CheckCircle2,
+  AlertCircle,
+  Zap,
+  TrendingUp,
+  Star,
+  DollarSign,
+  Timer,
+  Sparkles,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -29,112 +43,245 @@ interface MobileOrderCardProps {
   statusColor?: string;
 }
 
-export const MobileOrderCard = ({ 
-  order, 
-  onAccept, 
-  onViewDetails, 
+export const MobileOrderCard = ({
+  order,
+  onAccept,
+  onViewDetails,
   showActionButton = false,
   actionButtonText = "Accept",
-  statusColor = "bg-purple-100 text-purple-800"
+  statusColor = "bg-purple-100 text-purple-800",
 }: MobileOrderCardProps) => {
   const getStatusDisplay = (status: string) => {
     switch (status) {
-      case "ready": return "Awaiting Pickup";
-      case "picked_up": return "Collected";
-      case "in_transit": return "In Transit";
-      case "delivered": return "Delivered";
-      default: return status;
+      case "ready":
+        return "Ready for Pickup";
+      case "picked_up":
+        return "Collected";
+      case "in_transit":
+        return "In Transit";
+      case "delivered":
+        return "Delivered";
+      default:
+        return status;
     }
   };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case "ready": return AlertCircle;
-      case "picked_up": return Package;
-      case "in_transit": return Package;
-      case "delivered": return CheckCircle2;
-      default: return Package;
+      case "ready":
+        return Zap;
+      case "picked_up":
+        return Package;
+      case "in_transit":
+        return TrendingUp;
+      case "delivered":
+        return CheckCircle2;
+      default:
+        return Package;
+    }
+  };
+
+  const getStatusGradient = (status: string) => {
+    switch (status) {
+      case "ready":
+        return "from-orange-500 to-amber-500";
+      case "picked_up":
+        return "from-blue-500 to-indigo-500";
+      case "in_transit":
+        return "from-purple-500 to-violet-500";
+      case "delivered":
+        return "from-green-500 to-emerald-500";
+      default:
+        return "from-gray-500 to-gray-600";
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "ready":
+        return "text-orange-600 bg-orange-50 border-orange-200";
+      case "picked_up":
+        return "text-blue-600 bg-blue-50 border-blue-200";
+      case "in_transit":
+        return "text-purple-600 bg-purple-50 border-purple-200";
+      case "delivered":
+        return "text-green-600 bg-green-50 border-green-200";
+      default:
+        return "text-gray-600 bg-gray-50 border-gray-200";
     }
   };
 
   const StatusIcon = getStatusIcon(order.status);
 
   return (
-    <div className="bg-white mx-4 mb-3 rounded-lg border border-gray-200 shadow-sm">
-      <div className="p-4">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <Package className="h-4 w-4 text-gray-400" />
-            <span className="font-mono text-sm text-gray-600">#{order.order_number}</span>
+    <div className="food-order-card animate-fade-in-up">
+      {/* Animated Top Border */}
+      <div className="h-1 bg-gradient-to-r from-orange-500 via-amber-500 to-orange-500 bg-[length:200%_100%] animate-shimmer" />
+
+      <div className="p-6">
+        {/* Header with Enhanced Visual Hierarchy */}
+        <div className="flex items-start justify-between mb-6">
+          <div className="flex items-center gap-4">
+            {/* Status Icon with Glow Effect */}
+            <div
+              className={cn(
+                "p-3 rounded-2xl bg-gradient-to-br shadow-lg",
+                getStatusGradient(order.status)
+              )}
+            >
+              <StatusIcon className="h-6 w-6 text-white" />
+            </div>
+
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="font-mono text-lg font-bold text-gray-900">
+                  #{order.order_number}
+                </span>
+                <div
+                  className={cn(
+                    "px-3 py-1 rounded-full text-xs font-semibold border",
+                    getStatusColor(order.status)
+                  )}
+                >
+                  {getStatusDisplay(order.status)}
+                </div>
+              </div>
+              <div className="flex items-center gap-2 text-sm text-gray-500">
+                <Clock className="h-4 w-4" />
+                <span>
+                  {format(new Date(order.created_at), "MMM d, h:mm a")}
+                </span>
+              </div>
+            </div>
           </div>
-          <Badge 
-            className={cn(
-              "flex items-center gap-1 px-2 py-1 text-xs",
-              order.status === "ready" && "bg-orange-100 text-orange-700 border-orange-200",
-              order.status === "picked_up" && "bg-blue-100 text-blue-700 border-blue-200",
-              order.status === "in_transit" && "bg-purple-100 text-purple-700 border-purple-200",
-              order.status === "delivered" && "bg-green-100 text-green-700 border-green-200"
-            )}
-          >
-            <StatusIcon className="h-3 w-3" />
-            {getStatusDisplay(order.status)}
-          </Badge>
+
+          {/* Priority Badge */}
+          <div className="flex flex-col items-end gap-2">
+            <Badge className="bg-gradient-to-r from-orange-500 to-amber-500 text-white px-3 py-1 text-xs font-semibold border-0 shadow-lg">
+              <Sparkles className="h-3 w-3 mr-1" />
+              Priority
+            </Badge>
+          </div>
         </div>
-        
-        {/* Amount */}
-        <div className="mb-3">
-          <div className="text-xl font-bold text-gray-900">
-            R{order.total_amount.toFixed(2)}
+
+        {/* Amount Section - More Prominent */}
+        <div className="mb-6 p-4 bg-gradient-to-br from-orange-50 to-amber-50 rounded-2xl border border-orange-100">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-2xl font-bold bg-gradient-to-r from-orange-600 to-amber-600 bg-clip-text text-transparent">
+                R{order.total_amount.toFixed(2)}
+              </div>
+              <div className="text-sm text-gray-600 mt-1">Order Total</div>
+            </div>
+            <div className="text-right">
+              <div className="text-lg font-bold text-green-600">R10.00</div>
+              <div className="text-xs text-gray-500">You'll Earn</div>
+            </div>
           </div>
         </div>
-        
-        {/* Location Info */}
-        <div className="space-y-2 mb-3 text-sm">
-          <div className="flex items-center gap-2 text-gray-600">
-            <User className="h-3 w-3" />
-            <span className="font-medium">{order.merchant?.name || "Unknown Merchant"}</span>
+
+        {/* Enhanced Location Cards */}
+        <div className="space-y-4 mb-6">
+          {/* Pickup Location */}
+          <div className="p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl border border-blue-100">
+            <div className="flex items-start gap-3">
+              <div className="p-2 bg-blue-100 rounded-xl">
+                <Package className="h-5 w-5 text-blue-600" />
+              </div>
+              <div className="flex-1">
+                <div className="text-xs font-semibold text-blue-700 mb-1 uppercase tracking-wide">
+                  Pickup from
+                </div>
+                <div className="text-sm font-bold text-gray-900 mb-1">
+                  {order.merchant?.name || "Unknown Merchant"}
+                </div>
+                <div className="text-xs text-gray-600">
+                  {order.merchant?.location || "Location not specified"}
+                </div>
+              </div>
+              <div className="flex items-center gap-1 text-xs text-blue-600">
+                <Star className="h-3 w-3 fill-current" />
+                <span>4.8</span>
+              </div>
+            </div>
           </div>
+
+          {/* Delivery Location */}
           {order.customer_addresses && (
-            <div className="flex items-center gap-2 text-gray-600">
-              <MapPin className="h-3 w-3" />
-              <span>{order.customer_addresses.building_name} - Room {order.customer_addresses.room_number}</span>
+            <div className="p-4 bg-gradient-to-br from-purple-50 to-violet-50 rounded-2xl border border-purple-100">
+              <div className="flex items-start gap-3">
+                <div className="p-2 bg-purple-100 rounded-xl">
+                  <MapPin className="h-5 w-5 text-purple-600" />
+                </div>
+                <div className="flex-1">
+                  <div className="text-xs font-semibold text-purple-700 mb-1 uppercase tracking-wide">
+                    Deliver to
+                  </div>
+                  <div className="text-sm font-bold text-gray-900 mb-1">
+                    {order.customer_addresses.building_name}
+                  </div>
+                  <div className="text-xs text-gray-600">
+                    Room {order.customer_addresses.room_number}
+                  </div>
+                </div>
+                <div className="flex items-center gap-1 text-xs text-purple-600">
+                  <Timer className="h-3 w-3" />
+                  <span>~15min</span>
+                </div>
+              </div>
             </div>
           )}
         </div>
 
-        {/* Time */}
-        <div className="flex items-center gap-1 mb-4 text-xs text-gray-500">
-          <Clock className="h-3 w-3" />
-          <span>{format(new Date(order.created_at), "MMM d, h:mm a")}</span>
-        </div>
-        
-        {/* Actions */}
-        <div className="flex items-center justify-between">
+        {/* Enhanced Action Buttons */}
+        <div className="flex items-center gap-3 pt-4 border-t border-gray-100">
           {showActionButton && onAccept ? (
-            <Button 
+            <Button
               onClick={() => onAccept(order.id)}
-              className="bg-primary hover:bg-primary/90 text-white px-4 py-2 text-sm rounded-md"
+              className="flex-1 h-12 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
             >
+              <Zap className="h-5 w-5 mr-2" />
               {actionButtonText}
             </Button>
           ) : (
-            <div />
+            <div className="flex-1" />
           )}
-          
+
           <Button
-            variant="ghost"
+            variant="outline"
             size="sm"
             onClick={() => onViewDetails(order.id)}
-            className="text-gray-500 hover:text-gray-700"
+            className="h-12 px-6 border-2 border-orange-200 text-orange-600 hover:bg-orange-50 hover:border-orange-300 font-semibold rounded-xl transition-all duration-300 transform hover:scale-105"
           >
-            View Details
-            <ChevronRight className="h-4 w-4 ml-1" />
+            <DollarSign className="h-4 w-4 mr-2" />
+            Details
+            <ChevronRight className="h-4 w-4 ml-2" />
           </Button>
+        </div>
+
+        {/* Quick Stats Row */}
+        <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-100">
+          <div className="flex items-center gap-4 text-xs text-gray-500">
+            <div className="flex items-center gap-1">
+              <Package className="h-3 w-3" />
+              <span>2 items</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <Timer className="h-3 w-3" />
+              <span>15 min</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <MapPin className="h-3 w-3" />
+              <span>1.2 km</span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1 text-xs text-green-600 font-semibold">
+            <CheckCircle2 className="h-3 w-3" />
+            <span>Paid</span>
+          </div>
         </div>
       </div>
     </div>
   );
 };
-
-// Import CheckCircle2 at the top with other imports
