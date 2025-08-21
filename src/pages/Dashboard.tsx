@@ -30,10 +30,16 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
-import { getRunnerBaseFee } from "@/lib/utils";
+import { getRunnerBaseFee, cn } from "@/lib/utils";
 import { RunnerNotifications } from "@/components/RunnerNotifications";
 import { PinVerificationDialog } from "@/components/PinVerificationDialog";
 import { CollectionPinDisplay } from "@/components/CollectionPinDisplay";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { MobileHeader } from "@/components/MobileHeader";
+import { MobileTabNavigation } from "@/components/MobileTabNavigation";
+import { MobileBottomNavigation } from "@/components/MobileBottomNavigation";
+import { MobileOrderCard } from "@/components/MobileOrderCard";
+import { MobileEarningsCard } from "@/components/MobileEarningsCard";
 
 // Define the types based on the database schema and actual returned data
 interface Order {
@@ -90,6 +96,7 @@ const Dashboard = () => {
   const { currentUser } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   
   const [isAvailable, setIsAvailable] = useState(true);
   const [activeTab, setActiveTab] = useState("available");
@@ -108,6 +115,7 @@ const Dashboard = () => {
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [isVerifyingPin, setIsVerifyingPin] = useState(false);
   const [isVerifyingCollection, setIsVerifyingCollection] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   
   // Status styling
   const statusLabels = {
@@ -794,6 +802,212 @@ const Dashboard = () => {
     });
   };
   
+  // Filter orders based on search query
+  const filteredOrders = orders.filter(order => {
+    if (!searchQuery) return true;
+    
+    const searchLower = searchQuery.toLowerCase();
+    return (
+      order.order_number.toLowerCase().includes(searchLower) ||
+      order.merchant?.name.toLowerCase().includes(searchLower) ||
+      order.customer_addresses?.building_name.toLowerCase().includes(searchLower)
+    );
+  });
+
+  // Mobile Layout
+  if (isMobile) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <MobileHeader 
+          title="Runner Dashboard"
+          onNotificationClick={() => setActiveTab("notifications")}
+          hasNotifications={false}
+          showAvailabilityToggle={activeTab === "available"}
+          isAvailable={isAvailable}
+          onAvailabilityChange={setIsAvailable}
+        />
+        
+        {["available", "active", "completed"].includes(activeTab) && (
+          <MobileTabNavigation 
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+            availableCount={orders.filter(o => o.status === "ready" && !o.runner_id).length}
+            activeCount={orders.filter(o => ["ready", "picked_up", "in_transit"].includes(o.status) && o.runner_id === currentUser?.id).length}
+            completedCount={orders.filter(o => o.status === "delivered" && o.runner_id === currentUser?.id).length}
+          />
+        )}
+        
+        {/* Mobile Content */}
+        <div className={cn(
+          "pb-20 min-h-screen",
+          ["available", "active", "completed"].includes(activeTab) ? "pt-32" : "pt-16"
+        )}>
+          {activeTab === "available" && (
+            <div>
+              {!isAvailable && (
+                <div className="mx-4 mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4 text-amber-600" />
+                    <p className="text-amber-800 text-sm">You're offline. Turn on availability to accept orders.</p>
+                  </div>
+                </div>
+              )}
+              
+              {isLoading && (
+                <div className="text-center py-12">
+                  <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
+                  <p className="text-gray-600">Loading orders...</p>
+                </div>
+              )}
+              
+              {error && (
+                <div className="mx-4 mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-red-800 text-sm">{error}</p>
+                </div>
+              )}
+              
+              {!isLoading && !error && filteredOrders.filter(order => order.status === "ready" && !order.runner_id).length === 0 && (
+                <div className="text-center py-12 px-4">
+                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <ShoppingBag className="h-8 w-8 text-gray-400" />
+                  </div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No orders available</h3>
+                  <p className="text-gray-500 text-sm mb-4">New opportunities will appear here</p>
+                  <Button 
+                    onClick={handleManualRefresh}
+                    variant="outline"
+                    size="sm"
+                  >
+                    <RefreshCcw className="h-4 w-4 mr-2" />
+                    Refresh
+                  </Button>
+                </div>
+              )}
+              
+              {filteredOrders
+                .filter(order => order.status === "ready" && !order.runner_id)
+                .map(order => (
+                  <MobileOrderCard
+                    key={order.id}
+                    order={order}
+                    onAccept={handleAcceptOrder}
+                    onViewDetails={(orderId) => navigate(`/order-details/${orderId}`)}
+                    showActionButton={isAvailable}
+                    actionButtonText="Accept Order"
+                  />
+                ))}
+            </div>
+          )}
+          
+          {activeTab === "active" && (
+            <div>
+              {!isLoading && filteredOrders.filter(order => ["ready", "picked_up", "in_transit"].includes(order.status) && order.runner_id === currentUser?.id).length === 0 && (
+                <div className="text-center py-12 px-4">
+                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <ArrowRightCircle className="h-8 w-8 text-gray-400" />
+                  </div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No active orders</h3>
+                  <p className="text-gray-500 text-sm">Your accepted orders will appear here</p>
+                </div>
+              )}
+              
+              {filteredOrders
+                .filter(order => ["ready", "picked_up", "in_transit"].includes(order.status) && order.runner_id === currentUser?.id)
+                .map(order => (
+                  <MobileOrderCard
+                    key={order.id}
+                    order={order}
+                    onViewDetails={(orderId) => navigate(`/order-details/${orderId}`)}
+                  />
+                ))}
+            </div>
+          )}
+          
+          {activeTab === "completed" && (
+            <div>
+              {!isLoading && filteredOrders.filter(order => order.status === "delivered" && order.runner_id === currentUser?.id).length === 0 && (
+                <div className="text-center py-12 px-4">
+                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <CheckCircle2 className="h-8 w-8 text-gray-400" />
+                  </div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No completed orders</h3>
+                  <p className="text-gray-500 text-sm">Your delivery history will appear here</p>
+                </div>
+              )}
+              
+              {filteredOrders
+                .filter(order => order.status === "delivered" && order.runner_id === currentUser?.id)
+                .map(order => (
+                  <MobileOrderCard
+                    key={order.id}
+                    order={order}
+                    onViewDetails={(orderId) => navigate(`/order-details/${orderId}`)}
+                  />
+                ))}
+            </div>
+          )}
+          
+          {activeTab === "earnings" && (
+            <MobileEarningsCard earnings={earnings} />
+          )}
+          
+          {activeTab === "notifications" && (
+            <div className="p-4">
+              <RunnerNotifications />
+            </div>
+          )}
+          
+          {activeTab === "profile" && (
+            <div className="p-4 space-y-4">
+              <div className="text-center py-8">
+                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <User className="h-8 w-8 text-primary" />
+                </div>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">Profile Settings</h3>
+                <p className="text-gray-500 text-sm">Manage your account and preferences</p>
+              </div>
+              
+              <div className="space-y-2">
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start"
+                  onClick={() => navigate("/profile")}
+                >
+                  <User className="h-4 w-4 mr-3" />
+                  Edit Profile
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start"
+                  onClick={() => navigate("/earnings")}
+                >
+                  <TrendingUp className="h-4 w-4 mr-3" />
+                  Earnings Details
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+        
+        <MobileBottomNavigation 
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+        />
+        
+        {/* Dialogs */}
+        <PinVerificationDialog
+          isOpen={showPinDialog}
+          onClose={() => {
+            setShowPinDialog(false);
+            setSelectedOrderId(null);
+          }}
+          onVerify={handlePinVerification}
+          isVerifying={isVerifyingPin}
+        />
+      </div>
+    );
+  }
+
   // Calculate counts for each order status
   const activeOrdersCount = orders.filter(order => 
     order.status === "picked_up" || order.status === "in_transit").length;

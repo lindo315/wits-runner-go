@@ -1,8 +1,11 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { MobileHeader } from "@/components/MobileHeader";
+import { MobileBottomNavigation } from "@/components/MobileBottomNavigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +16,7 @@ import { format } from "date-fns";
 import { CancelOrderDialog } from "@/components/CancelOrderDialog";
 import { PinVerificationDialog } from "@/components/PinVerificationDialog";
 import { PinDisplay } from "@/components/PinDisplay";
+import { CollectionPinDisplay } from "@/components/CollectionPinDisplay";
 import { getRunnerBaseFee } from "@/lib/utils";
 
 const OrderDetails = () => {
@@ -20,6 +24,7 @@ const OrderDetails = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { currentUser } = useAuth();
+  const isMobile = useIsMobile();
   
   const [order, setOrder] = useState<any | null>(null);
   const [customerInfo, setCustomerInfo] = useState<any | null>(null);
@@ -449,8 +454,15 @@ const OrderDetails = () => {
   
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-        <div className="container max-w-4xl mx-auto py-8 px-4">
+      <div className="min-h-screen bg-background">
+        {isMobile && (
+          <MobileHeader
+            title="Order Details"
+            onNotificationClick={() => {}}
+            hasNotifications={false}
+          />
+        )}
+        <div className={`container max-w-4xl mx-auto px-4 ${isMobile ? 'pt-20 pb-24' : 'py-8'}`}>
           <div className="flex items-center justify-center min-h-[60vh]">
             <div className="text-center space-y-4">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
@@ -458,14 +470,27 @@ const OrderDetails = () => {
             </div>
           </div>
         </div>
+        {isMobile && (
+          <MobileBottomNavigation
+            activeTab="available"
+            onTabChange={() => navigate("/dashboard")}
+          />
+        )}
       </div>
     );
   }
   
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-        <div className="container max-w-4xl mx-auto py-8 px-4">
+      <div className="min-h-screen bg-background">
+        {isMobile && (
+          <MobileHeader
+            title="Order Details"
+            onNotificationClick={() => {}}
+            hasNotifications={false}
+          />
+        )}
+        <div className={`container max-w-4xl mx-auto px-4 ${isMobile ? 'pt-20 pb-24' : 'py-8'}`}>
           <div className="flex items-center justify-center min-h-[60vh]">
             <Card className="w-full max-w-md shadow-lg">
               <CardContent className="pt-6 text-center space-y-4">
@@ -484,14 +509,27 @@ const OrderDetails = () => {
             </Card>
           </div>
         </div>
+        {isMobile && (
+          <MobileBottomNavigation
+            activeTab="available"
+            onTabChange={() => navigate("/dashboard")}
+          />
+        )}
       </div>
     );
   }
   
   if (!order) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-        <div className="container max-w-4xl mx-auto py-8 px-4">
+      <div className="min-h-screen bg-background">
+        {isMobile && (
+          <MobileHeader
+            title="Order Details"
+            onNotificationClick={() => {}}
+            hasNotifications={false}
+          />
+        )}
+        <div className={`container max-w-4xl mx-auto px-4 ${isMobile ? 'pt-20 pb-24' : 'py-8'}`}>
           <div className="flex items-center justify-center min-h-[60vh]">
             <Card className="w-full max-w-md shadow-lg">
               <CardContent className="pt-6 text-center space-y-4">
@@ -510,32 +548,48 @@ const OrderDetails = () => {
             </Card>
           </div>
         </div>
+        {isMobile && (
+          <MobileBottomNavigation
+            activeTab="available"
+            onTabChange={() => navigate("/dashboard")}
+          />
+        )}
       </div>
     );
   }
   
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-      <div className="container max-w-4xl mx-auto py-8 px-4 animate-fade-in">
-        {/* Header */}
-        <div className="mb-8">
-          <Button
-            variant="ghost"
-            className="mb-6 pl-0 flex items-center gap-2 hover:bg-white/50 rounded-lg transition-colors"
-            onClick={() => navigate("/dashboard")}
-          >
-            <ChevronLeft className="h-4 w-4" />
-            Back to Dashboard
-          </Button>
-        </div>
+    <div className="min-h-screen bg-background">
+      {isMobile && (
+        <MobileHeader
+          title={`Order #${order.order_number}`}
+          onNotificationClick={() => {}}
+          hasNotifications={false}
+        />
+      )}
+      
+      <div className={`container max-w-4xl mx-auto px-4 ${isMobile ? 'pt-20 pb-24' : 'py-8'} animate-fade-in`}>
+        {/* Desktop Header */}
+        {!isMobile && (
+          <div className="mb-8">
+            <Button
+              variant="ghost"
+              className="mb-6 pl-0 flex items-center gap-2 hover:bg-white/50 rounded-lg transition-colors"
+              onClick={() => navigate("/dashboard")}
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Back to Dashboard
+            </Button>
+          </div>
+        )}
         
         {/* Main Card */}
-        <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
-          <CardHeader className="pb-4 bg-gradient-to-r from-primary/5 to-blue-50 rounded-t-lg">
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <Card className={`shadow-xl border-0 bg-card ${isMobile ? 'mx-2' : ''}`}>
+          <CardHeader className={`${isMobile ? 'pb-3' : 'pb-4'} bg-gradient-to-r from-primary/5 to-blue-50 rounded-t-lg`}>
+            <div className={`flex flex-col ${isMobile ? 'gap-3' : 'lg:flex-row lg:items-center'} justify-between gap-4`}>
               <div className="space-y-3">
-                <div className="flex items-center gap-3 flex-wrap">
-                  <h1 className="text-3xl font-bold text-gray-900">Order #{order.order_number}</h1>
+                <div className={`flex items-center gap-3 ${isMobile ? 'flex-col items-start' : 'flex-wrap'}`}>
+                  <h1 className={`${isMobile ? 'text-xl' : 'text-3xl'} font-bold text-gray-900`}>Order #{order.order_number}</h1>
                   <Badge className={`${statusColors[order.status as keyof typeof statusColors]} border font-medium px-3 py-1`}>
                     {statusLabels[order.status as keyof typeof statusLabels]}
                   </Badge>
@@ -562,7 +616,7 @@ const OrderDetails = () => {
               </div>
               
               {/* Action Buttons */}
-              <div className="flex gap-3 flex-wrap">
+              <div className={`flex gap-3 ${isMobile ? 'flex-col w-full' : 'flex-wrap'}`}>
                 {!order.runner_id && order.status === "ready" && (
                   <Button 
                     onClick={handleAcceptOrder} 
@@ -610,7 +664,7 @@ const OrderDetails = () => {
             </div>
           </CardHeader>
           
-          <CardContent className="pt-8 space-y-8">
+          <CardContent className={`${isMobile ? 'pt-4 px-4' : 'pt-8'} space-y-6`}>
             {/* Payment Information */}
             <div className="space-y-4">
               <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
@@ -623,7 +677,7 @@ const OrderDetails = () => {
                 order.payment_status === 'refunded' ? 'bg-blue-50 border-blue-200' :
                 'bg-yellow-50 border-yellow-200'
               }`}>
-                <div className="grid md:grid-cols-3 gap-4">
+                <div className={`grid ${isMobile ? 'grid-cols-1 gap-3' : 'md:grid-cols-3 gap-4'}`}>
                   <div>
                     <p className="text-sm font-medium text-gray-600">Method</p>
                     <p className="text-lg font-semibold">{order.payment_method === "cash" ? "Cash on Delivery" : "Online Payment"}</p>
@@ -672,6 +726,23 @@ const OrderDetails = () => {
             </div>
 
             <Separator className="my-8" />
+            
+            {/* Collection PIN Display - for runners to show merchant */}
+            {order.collection_pin && currentUser?.id === order.runner_id && order.status === "ready" && (
+              <div className="space-y-4">
+                <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+                  <ShoppingBag className="h-5 w-5 text-primary" />
+                  Pickup Instructions
+                </h2>
+                <CollectionPinDisplay 
+                  pin={order.collection_pin}
+                  orderNumber={order.order_number}
+                  merchantName={order.merchant?.name}
+                />
+              </div>
+            )}
+
+            {order.collection_pin && currentUser?.id === order.runner_id && order.status === "ready" && <Separator className="my-8" />}
             
             {/* Delivery PIN Display - for customers */}
             {order.delivery_pin && currentUser?.id === order.customer_id && (
@@ -738,7 +809,7 @@ const OrderDetails = () => {
             <Separator className="my-8" />
             
             {/* Location Information */}
-            <div className="grid md:grid-cols-2 gap-8">
+            <div className={`grid ${isMobile ? 'grid-cols-1 gap-4' : 'md:grid-cols-2 gap-8'}`}>
               {/* Pickup Information */}
               <div className="space-y-4">
                 <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
@@ -865,6 +936,18 @@ const OrderDetails = () => {
           isVerifying={isVerifyingPin}
         />
       </div>
+      
+      {isMobile && (
+        <MobileBottomNavigation
+          activeTab="available"
+          onTabChange={(tab) => {
+            if (tab === "available") navigate("/dashboard");
+            if (tab === "earnings") navigate("/dashboard?tab=earnings");
+            if (tab === "notifications") navigate("/dashboard?tab=notifications");
+            if (tab === "profile") navigate("/dashboard?tab=profile");
+          }}
+        />
+      )}
     </div>
   );
 };

@@ -27,7 +27,8 @@ export default {
 				foreground: 'hsl(var(--foreground))',
 				primary: {
 					DEFAULT: 'hsl(var(--primary))',
-					foreground: 'hsl(var(--primary-foreground))'
+					foreground: 'hsl(var(--primary-foreground))',
+					600: 'hsl(var(--primary-600))'
 				},
 				secondary: {
 					DEFAULT: 'hsl(var(--secondary))',
@@ -80,6 +81,9 @@ export default {
 				md: 'calc(var(--radius) - 2px)',
 				sm: 'calc(var(--radius) - 4px)'
 			},
+			spacing: {
+				safe: 'env(safe-area-inset-bottom)',
+			},
 			keyframes: {
 				'accordion-down': {
 					from: {
@@ -115,5 +119,18 @@ export default {
 			}
 		}
 	},
-	plugins: [require("tailwindcss-animate")],
+	plugins: [
+		require("tailwindcss-animate"),
+		function({ addUtilities }) {
+			addUtilities({
+				'.scrollbar-hide': {
+					'-ms-overflow-style': 'none',
+					'scrollbar-width': 'none',
+					'&::-webkit-scrollbar': {
+						display: 'none'
+					}
+				}
+			})
+		}
+	],
 } satisfies Config;
