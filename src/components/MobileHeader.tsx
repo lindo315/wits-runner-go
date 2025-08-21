@@ -127,45 +127,6 @@ export const MobileHeader = ({
           </div>
         </div>
 
-        {/* Enhanced Status Bar */}
-        {showAvailabilityToggle && (
-          <div className="mt-4 p-3 bg-gradient-to-r from-orange-50 to-amber-50 rounded-2xl border border-orange-200">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div
-                  className={cn(
-                    "p-2 rounded-xl transition-all duration-300",
-                    isAvailable
-                      ? "bg-green-100 text-green-600"
-                      : "bg-gray-100 text-gray-600"
-                  )}
-                >
-                  <Zap className="h-4 w-4" />
-                </div>
-                <div>
-                  <div className="text-sm font-semibold text-gray-900">
-                    {isAvailable ? "Ready to Deliver" : "Taking a Break"}
-                  </div>
-                  <div className="text-xs text-gray-600">
-                    {isAvailable
-                      ? "You'll receive new order notifications"
-                      : "You won't receive new orders"}
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <div className="text-right">
-                  <div className="text-xs text-gray-600">Active Orders</div>
-                  <div className="text-sm font-bold text-gray-900">2</div>
-                </div>
-                <div className="w-8 h-8 bg-gradient-to-r from-orange-500 to-amber-500 rounded-full flex items-center justify-center">
-                  <User className="h-4 w-4 text-white" />
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </header>
   );

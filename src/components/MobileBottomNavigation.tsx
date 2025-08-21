@@ -164,25 +164,6 @@ export const MobileBottomNavigation = ({
           })}
         </div>
 
-        {/* Bottom Info Bar */}
-        <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
-          <div className="flex items-center gap-2 text-xs text-gray-500">
-            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-            <span>Connected</span>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <div className="text-right">
-              <div className="text-xs text-gray-500">Today's Earnings</div>
-              <div className="text-xs font-semibold text-orange-600">
-                R45.00
-              </div>
-            </div>
-            <div className="w-6 h-6 bg-gradient-to-r from-orange-500 to-amber-500 rounded-full flex items-center justify-center">
-              <span className="text-xs text-white font-bold">$</span>
-            </div>
-          </div>
-        </div>
       </div>
     </nav>
   );
