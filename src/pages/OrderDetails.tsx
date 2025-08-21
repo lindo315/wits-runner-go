@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MobileHeader } from "@/components/MobileHeader";
@@ -16,6 +16,7 @@ import { format } from "date-fns";
 import { CancelOrderDialog } from "@/components/CancelOrderDialog";
 import { PinVerificationDialog } from "@/components/PinVerificationDialog";
 import { PinDisplay } from "@/components/PinDisplay";
+import { CollectionPinDisplay } from "@/components/CollectionPinDisplay";
 import { getRunnerBaseFee } from "@/lib/utils";
 
 const OrderDetails = () => {
@@ -725,6 +726,23 @@ const OrderDetails = () => {
             </div>
 
             <Separator className="my-8" />
+            
+            {/* Collection PIN Display - for runners to show merchant */}
+            {order.collection_pin && currentUser?.id === order.runner_id && order.status === "ready" && (
+              <div className="space-y-4">
+                <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+                  <ShoppingBag className="h-5 w-5 text-primary" />
+                  Pickup Instructions
+                </h2>
+                <CollectionPinDisplay 
+                  pin={order.collection_pin}
+                  orderNumber={order.order_number}
+                  merchantName={order.merchant?.name}
+                />
+              </div>
+            )}
+
+            {order.collection_pin && currentUser?.id === order.runner_id && order.status === "ready" && <Separator className="my-8" />}
             
             {/* Delivery PIN Display - for customers */}
             {order.delivery_pin && currentUser?.id === order.customer_id && (
