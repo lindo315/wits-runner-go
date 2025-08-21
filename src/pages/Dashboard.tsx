@@ -30,7 +30,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
-import { getRunnerBaseFee } from "@/lib/utils";
+import { getRunnerBaseFee, cn } from "@/lib/utils";
 import { RunnerNotifications } from "@/components/RunnerNotifications";
 import { PinVerificationDialog } from "@/components/PinVerificationDialog";
 import { CollectionPinDisplay } from "@/components/CollectionPinDisplay";
@@ -827,16 +827,21 @@ const Dashboard = () => {
           onAvailabilityChange={setIsAvailable}
         />
         
-        <MobileTabNavigation 
-          activeTab={activeTab}
-          onTabChange={setActiveTab}
-          availableCount={orders.filter(o => o.status === "ready" && !o.runner_id).length}
-          activeCount={orders.filter(o => ["ready", "picked_up", "in_transit"].includes(o.status) && o.runner_id === currentUser?.id).length}
-          completedCount={orders.filter(o => o.status === "delivered" && o.runner_id === currentUser?.id).length}
-        />
+        {["available", "active", "completed"].includes(activeTab) && (
+          <MobileTabNavigation 
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+            availableCount={orders.filter(o => o.status === "ready" && !o.runner_id).length}
+            activeCount={orders.filter(o => ["ready", "picked_up", "in_transit"].includes(o.status) && o.runner_id === currentUser?.id).length}
+            completedCount={orders.filter(o => o.status === "delivered" && o.runner_id === currentUser?.id).length}
+          />
+        )}
         
         {/* Mobile Content */}
-        <div className="pt-32 pb-20 min-h-screen">
+        <div className={cn(
+          "pb-20 min-h-screen",
+          ["available", "active", "completed"].includes(activeTab) ? "pt-32" : "pt-16"
+        )}>
           {activeTab === "available" && (
             <div>
               {!isAvailable && (

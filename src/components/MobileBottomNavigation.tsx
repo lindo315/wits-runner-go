@@ -10,12 +10,11 @@ export const MobileBottomNavigation = ({ activeTab, onTabChange }: MobileBottomN
   const navItems = [
     { id: "available", icon: Package, label: "Orders" },
     { id: "earnings", icon: BarChart3, label: "Earnings" },
-    { id: "notifications", icon: Bell, label: "Alerts" },
     { id: "profile", icon: User, label: "Profile" },
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 pb-safe">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t shadow-lg pb-safe">
       <div className="flex">
         {navItems.map((item) => {
           const Icon = item.icon;
@@ -27,8 +26,10 @@ export const MobileBottomNavigation = ({ activeTab, onTabChange }: MobileBottomN
               key={item.id}
               onClick={() => onTabChange(item.id)}
               className={cn(
-                "flex-1 flex flex-col items-center py-2 px-1 min-h-[60px] transition-colors",
-                isActive ? "text-primary" : "text-gray-500 hover:text-gray-700"
+                "flex-1 flex flex-col items-center py-3 px-1 min-h-[64px] transition-all duration-200",
+                isActive 
+                  ? "text-primary bg-primary/8" 
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/30"
               )}
             >
               <Icon className="h-6 w-6 mb-1" />
