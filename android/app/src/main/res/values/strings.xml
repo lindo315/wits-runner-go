@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Wits Runner Go</string>
+    <string name="title_activity_main">Wits Runner Go</string>
+    <string name="package_name">app.lovable.witsrunnergo</string>
+    <string name="custom_url_scheme">app.lovable.witsrunnergo</string>
+</resources>
