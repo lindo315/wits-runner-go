@@ -1,5 +1,6 @@
-import { DollarSign, TrendingUp, Calendar, Target } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import { DollarSign, TrendingUp, Calendar, Target, ArrowUp, ArrowDown } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 
 interface EarningsSummary {
   today: { count: number; amount: number };
@@ -13,93 +14,77 @@ interface MobileEarningsCardProps {
 }
 
 export const MobileEarningsCard = ({ earnings }: MobileEarningsCardProps) => {
-  const earningsStats = [
-    {
-      title: "Today",
-      amount: earnings.today.amount,
-      count: earnings.today.count,
-      icon: Calendar,
-      color: "from-green-500 to-emerald-600",
-      bgColor: "bg-green-50",
-      iconColor: "text-green-600"
-    },
-    {
-      title: "This Week",
-      amount: earnings.weekly.amount,
-      count: earnings.weekly.count,
-      icon: TrendingUp,
-      color: "from-blue-500 to-blue-600",
-      bgColor: "bg-blue-50",
-      iconColor: "text-blue-600"
-    },
-    {
-      title: "This Month",
-      amount: earnings.monthly.amount,
-      count: earnings.monthly.count,
-      icon: Target,
-      color: "from-purple-500 to-purple-600",
-      bgColor: "bg-purple-50",
-      iconColor: "text-purple-600"
-    },
-    {
-      title: "Total",
-      amount: earnings.total.amount,
-      count: earnings.total.count,
-      icon: DollarSign,
-      color: "from-orange-500 to-orange-600",
-      bgColor: "bg-orange-50",
-      iconColor: "text-orange-600"
-    }
-  ];
-
   return (
     <div className="p-4 space-y-4">
-      <h2 className="text-xl font-bold text-gray-900 mb-4">Earnings Overview</h2>
-      
-      <div className="grid grid-cols-2 gap-3">
-        {earningsStats.map((stat) => {
-          const Icon = stat.icon;
-          
-          return (
-            <Card key={stat.title} className="border-0 shadow-sm hover:shadow-md transition-shadow duration-200">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <div className={`p-2 ${stat.bgColor} rounded-xl`}>
-                    <Icon className={`h-4 w-4 ${stat.iconColor}`} />
-                  </div>
-                </div>
-                
-                <div className="space-y-1">
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-                    {stat.title}
-                  </p>
-                  <p className="text-lg font-bold text-gray-900">
-                    R{stat.amount.toFixed(2)}
-                  </p>
-                  <p className="text-xs text-gray-600">
-                    {stat.count} {stat.count === 1 ? 'delivery' : 'deliveries'}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold text-gray-900">Earnings</h2>
+        <Button variant="outline" size="sm" className="text-primary border-primary">
+          View Details
+        </Button>
       </div>
       
-      {/* Daily Average */}
-      <Card className="border-0 shadow-sm bg-gradient-to-r from-primary to-primary/90 text-white">
+      {/* Today's Earnings - Featured */}
+      <Card className="border border-primary/20 bg-primary/5">
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm text-primary font-medium">Today</span>
+            <ArrowUp className="h-4 w-4 text-green-600" />
+          </div>
+          <div className="text-2xl font-bold text-gray-900 mb-1">
+            R{earnings.today.amount.toFixed(2)}
+          </div>
+          <div className="text-sm text-gray-600">
+            {earnings.today.count} deliveries
+          </div>
+        </CardContent>
+      </Card>
+      
+      {/* Stats Grid */}
+      <div className="grid grid-cols-2 gap-3">
+        <Card>
+          <CardContent className="p-4">
+            <div className="text-sm text-gray-600 mb-1">This Week</div>
+            <div className="text-lg font-semibold text-gray-900">
+              R{earnings.weekly.amount.toFixed(2)}
+            </div>
+            <div className="text-xs text-gray-500">
+              {earnings.weekly.count} orders
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="p-4">
+            <div className="text-sm text-gray-600 mb-1">This Month</div>
+            <div className="text-lg font-semibold text-gray-900">
+              R{earnings.monthly.amount.toFixed(2)}
+            </div>
+            <div className="text-xs text-gray-500">
+              {earnings.monthly.count} orders
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+      
+      {/* Total Earnings */}
+      <Card className="bg-gray-50">
         <CardContent className="p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium text-white/80 uppercase tracking-wide mb-1">
-                Daily Average
-              </p>
-              <p className="text-xl font-bold">
-                R{earnings.weekly.count > 0 ? (earnings.weekly.amount / 7).toFixed(2) : '0.00'}
-              </p>
+              <div className="text-sm text-gray-600 mb-1">Total Earned</div>
+              <div className="text-xl font-bold text-gray-900">
+                R{earnings.total.amount.toFixed(2)}
+              </div>
+              <div className="text-xs text-gray-500">
+                {earnings.total.count} total deliveries
+              </div>
             </div>
-            <div className="p-3 bg-white/10 rounded-xl">
-              <TrendingUp className="h-5 w-5" />
+            <div className="text-right">
+              <div className="text-xs text-gray-500 mb-1">Daily Avg</div>
+              <div className="text-sm font-medium text-gray-700">
+                R{earnings.weekly.count > 0 ? (earnings.weekly.amount / 7).toFixed(2) : '0.00'}
+              </div>
             </div>
           </div>
         </CardContent>

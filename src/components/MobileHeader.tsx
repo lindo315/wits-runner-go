@@ -1,7 +1,7 @@
-import { Bell } from "lucide-react";
+import { Bell, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 
 interface MobileHeaderProps {
   title: string;
@@ -21,42 +21,44 @@ export const MobileHeader = ({
   onAvailabilityChange
 }: MobileHeaderProps) => {
   return (
-    <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-primary to-primary-600 text-white pt-safe">
+    <div className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200 pt-safe">
       {/* Main Header */}
-      <header className="px-4 py-4 flex items-center justify-between">
-        <h1 className="text-xl font-bold">{title}</h1>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onNotificationClick}
-          className="text-white hover:bg-white/10 relative"
-        >
-          <Bell className="h-5 w-5" />
-          {hasNotifications && (
-            <div className="absolute -top-1 -right-1 h-2 w-2 bg-red-500 rounded-full animate-pulse" />
-          )}
-        </Button>
-      </header>
-      
-      {/* Availability Toggle */}
-      {showAvailabilityToggle && (
-        <div className="px-4 pb-4">
-          <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className={`w-3 h-3 rounded-full ${isAvailable ? 'bg-green-400 animate-pulse' : 'bg-gray-400'}`} />
-              <Label htmlFor="availability" className="text-white font-medium">
-                {isAvailable ? "Available for orders" : "Currently unavailable"}
-              </Label>
+      <div className="px-4 py-4 flex items-center justify-between">
+        <div>
+          <h1 className="text-lg font-semibold text-gray-900">{title}</h1>
+          {showAvailabilityToggle && (
+            <div className="flex items-center gap-2 mt-1">
+              <div className={`w-2 h-2 rounded-full ${isAvailable ? 'bg-green-500' : 'bg-gray-400'}`} />
+              <span className="text-sm text-gray-600">
+                {isAvailable ? "Available" : "Offline"}
+              </span>
             </div>
+          )}
+        </div>
+        
+        <div className="flex items-center gap-2">
+          {showAvailabilityToggle && (
             <Switch
-              id="availability"
               checked={isAvailable}
               onCheckedChange={onAvailabilityChange}
               className="data-[state=checked]:bg-green-500"
             />
-          </div>
+          )}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onNotificationClick}
+            className="relative"
+          >
+            <Bell className="h-5 w-5" />
+            {hasNotifications && (
+              <Badge className="absolute -top-2 -right-2 h-5 w-5 p-0 bg-red-500 text-white text-xs flex items-center justify-center">
+                3
+              </Badge>
+            )}
+          </Button>
         </div>
-      )}
+      </div>
     </div>
   );
 };
