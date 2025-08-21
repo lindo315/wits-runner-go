@@ -1,277 +1,239 @@
-import {
-  ChevronRight,
-  MapPin,
-  Package,
-  Clock,
-  User,
-  CheckCircle2,
-  AlertCircle,
-  Zap,
-  TrendingUp,
-  Star,
-  DollarSign,
-  Timer,
-  Sparkles,
-} from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
+import { Separator } from "@/components/ui/separator";
+import { 
+  MapPin, 
+  CreditCard, 
+  CheckCircle2,
+  ArrowRightCircle,
+  AlertCircle
+} from "lucide-react";
 import { format } from "date-fns";
 
 interface Order {
   id: string;
   order_number: string;
-  status: string;
-  total_amount: number;
-  merchant?: {
+  status: "pending" | "ready" | "picked_up" | "in_transit" | "delivered";
+  payment_status: "pending" | "paid" | "failed" | "refunded";
+  payment_method: string;
+  runner_id: string | null;
+  merchant_id?: string;
+  delivery_pin?: string;
+  collection_pin?: string;
+  merchant: {
     name: string;
     location: string;
   } | null;
-  customer_addresses?: {
+  customer_addresses: {
     building_name: string;
     room_number: string;
+    delivery_instructions: string | null;
   } | null;
+  order_items: {
+    id: string;
+    quantity: number;
+    menu_item: {
+      name: string;
+    } | null;
+    special_requests: string | null;
+  }[] | null;
+  total_amount: number;
   created_at: string;
+  delivered_at: string | null;
 }
 
 interface MobileOrderCardProps {
   order: Order;
+  type: "available" | "active" | "completed";
   onAccept?: (orderId: string) => void;
-  onViewDetails: (orderId: string) => void;
-  showActionButton?: boolean;
-  actionButtonText?: string;
-  statusColor?: string;
+  onMarkInTransit?: (orderId: string) => void;
+  onStartDelivery?: (orderId: string) => void;
+  isAvailable?: boolean;
+  isUpdating?: boolean;
+  runnerBaseFee?: number;
 }
 
-export const MobileOrderCard = ({
-  order,
+const statusLabels = {
+  pending: "Pending",
+  ready: "Ready",
+  picked_up: "Picked Up",
+  in_transit: "In Transit",
+  delivered: "Delivered"
+};
+
+const statusColors = {
+  pending: "bg-yellow-100 text-yellow-800",
+  ready: "bg-amber-100 text-amber-800",
+  picked_up: "bg-blue-100 text-blue-800",
+  in_transit: "bg-purple-100 text-purple-800",
+  delivered: "bg-green-100 text-green-800"
+};
+
+const paymentStatusColors = {
+  pending: "bg-yellow-100 text-yellow-800",
+  paid: "bg-green-100 text-green-800",
+  failed: "bg-red-100 text-red-800",
+  refunded: "bg-blue-100 text-blue-800"
+};
+
+export function MobileOrderCard({ 
+  order, 
+  type, 
   onAccept,
-  onViewDetails,
-  showActionButton = false,
-  actionButtonText = "Accept",
-  statusColor = "bg-purple-100 text-purple-800",
-}: MobileOrderCardProps) => {
-  const getStatusDisplay = (status: string) => {
-    switch (status) {
-      case "ready":
-        return "Ready for Pickup";
-      case "picked_up":
-        return "Collected";
-      case "in_transit":
-        return "In Transit";
-      case "delivered":
-        return "Delivered";
-      default:
-        return status;
-    }
+  onMarkInTransit,
+  onStartDelivery,
+  isAvailable = true,
+  isUpdating = false,
+  runnerBaseFee = 10.00
+}: MobileOrderCardProps) {
+  const formatOrderDate = (dateString: string) => {
+    return format(new Date(dateString), "MMM d, h:mm a");
   };
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "ready":
-        return Zap;
-      case "picked_up":
-        return Package;
-      case "in_transit":
-        return TrendingUp;
-      case "delivered":
-        return CheckCircle2;
-      default:
-        return Package;
+  const renderActionButton = () => {
+    if (type === "available" && onAccept) {
+      return (
+        <Button 
+          onClick={() => onAccept(order.id)}
+          disabled={!isAvailable || isUpdating}
+          size="sm"
+          className="w-full"
+        >
+          <CheckCircle2 className="h-4 w-4 mr-2" />
+          Accept Order
+        </Button>
+      );
     }
-  };
 
-  const getStatusGradient = (status: string) => {
-    switch (status) {
-      case "ready":
-        return "from-orange-500 to-amber-500";
-      case "picked_up":
-        return "from-blue-500 to-indigo-500";
-      case "in_transit":
-        return "from-purple-500 to-violet-500";
-      case "delivered":
-        return "from-green-500 to-emerald-500";
-      default:
-        return "from-gray-500 to-gray-600";
+    if (type === "active") {
+      if (order.status === "ready" && order.collection_pin) {
+        return (
+          <div className="space-y-2">
+            <div className="text-center p-2 bg-primary/10 rounded-md">
+              <p className="text-sm font-medium">Collection PIN</p>
+              <p className="text-lg font-bold text-primary">{order.collection_pin}</p>
+            </div>
+            {onMarkInTransit && (
+              <Button 
+                onClick={() => onMarkInTransit(order.id)}
+                disabled={isUpdating}
+                size="sm"
+                className="w-full"
+              >
+                <ArrowRightCircle className="h-4 w-4 mr-2" />
+                Mark In Transit
+              </Button>
+            )}
+          </div>
+        );
+      }
+
+      if (order.status === "in_transit" && order.delivery_pin && onStartDelivery) {
+        return (
+          <Button 
+            onClick={() => onStartDelivery(order.id)}
+            disabled={isUpdating}
+            size="sm"
+            className="w-full"
+          >
+            Complete Delivery
+          </Button>
+        );
+      }
     }
-  };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "ready":
-        return "text-orange-600 bg-orange-50 border-orange-200";
-      case "picked_up":
-        return "text-blue-600 bg-blue-50 border-blue-200";
-      case "in_transit":
-        return "text-purple-600 bg-purple-50 border-purple-200";
-      case "delivered":
-        return "text-green-600 bg-green-50 border-green-200";
-      default:
-        return "text-gray-600 bg-gray-50 border-gray-200";
-    }
+    return null;
   };
-
-  const StatusIcon = getStatusIcon(order.status);
 
   return (
-    <div className="food-order-card animate-fade-in-up">
-      {/* Animated Top Border */}
-      <div className="h-0.5 bg-gradient-to-r from-orange-500 via-amber-500 to-orange-500 bg-[length:200%_100%] animate-shimmer" />
-
-      <div className="p-3">
-        {/* Header with Enhanced Visual Hierarchy */}
-        <div className="flex items-start justify-between mb-3">
-          <div className="flex items-center gap-2">
-            {/* Status Icon with Glow Effect */}
-            <div
-              className={cn(
-                "p-2 rounded-lg bg-gradient-to-br shadow-md",
-                getStatusGradient(order.status)
-              )}
-            >
-              <StatusIcon className="h-4 w-4 text-white" />
-            </div>
-
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="font-mono text-sm font-bold text-gray-900">
-                  #{order.order_number}
-                </span>
-                <div
-                  className={cn(
-                    "px-2 py-0.5 rounded-full text-xs font-semibold border",
-                    getStatusColor(order.status)
-                  )}
-                >
-                  {getStatusDisplay(order.status)}
-                </div>
-              </div>
-              <div className="flex items-center gap-1 text-xs text-gray-500">
-                <Clock className="h-3 w-3" />
-                <span>
-                  {format(new Date(order.created_at), "MMM d, h:mm a")}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Priority Badge */}
-          <Badge className="bg-gradient-to-r from-orange-500 to-amber-500 text-white px-2 py-0.5 text-xs font-semibold border-0 shadow-md">
-            <Sparkles className="h-3 w-3 mr-1" />
-          </Badge>
-        </div>
-
-        {/* Amount Section - More Prominent */}
-        <div className="mb-3 p-2 bg-gradient-to-br from-orange-50 to-amber-50 rounded-lg border border-orange-100">
-          <div className="flex items-center justify-between">
+    <Card className="hover:shadow-md transition-shadow">
+      <CardContent className="p-4">
+        <div className="space-y-3">
+          {/* Order Header */}
+          <div className="flex justify-between items-start">
             <div>
-              <div className="text-lg font-bold bg-gradient-to-r from-orange-600 to-amber-600 bg-clip-text text-transparent">
-                R{order.total_amount.toFixed(2)}
-              </div>
-              <div className="text-xs text-gray-600">Order Total</div>
+              <h3 className="font-semibold text-base">
+                Order #{order.order_number}
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                {formatOrderDate(order.created_at)}
+              </p>
             </div>
-            <div className="text-right">
-              <div className="text-sm font-bold text-green-600">R10.00</div>
-              <div className="text-xs text-gray-500">You'll Earn</div>
+            <div className="flex flex-col items-end space-y-1">
+              <Badge className={statusColors[order.status]} variant="secondary">
+                {statusLabels[order.status]}
+              </Badge>
+              <Badge className={paymentStatusColors[order.payment_status]} variant="outline">
+                {order.payment_status}
+              </Badge>
             </div>
           </div>
-        </div>
 
-        {/* Enhanced Location Cards */}
-        <div className="space-y-2 mb-3">
-          {/* Pickup Location */}
-          <div className="p-2 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg border border-blue-100">
-            <div className="flex items-center gap-2">
-              <div className="p-1 bg-blue-100 rounded-lg">
-                <Package className="h-3 w-3 text-blue-600" />
-              </div>
+          {/* Merchant Info */}
+          {order.merchant && (
+            <div className="flex items-start space-x-2 text-sm">
+              <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
               <div className="flex-1">
-                <div className="text-xs font-semibold text-blue-700 mb-0.5">
-                  From: {order.merchant?.name || "Unknown"}
-                </div>
-                <div className="text-xs text-gray-600">
-                  {order.merchant?.location || "Location not specified"}
-                </div>
-              </div>
-              <div className="flex items-center gap-1 text-xs text-blue-600">
-                <Star className="h-3 w-3 fill-current" />
-                <span>4.8</span>
+                <p className="font-medium">{order.merchant.name}</p>
+                <p className="text-muted-foreground">{order.merchant.location}</p>
               </div>
             </div>
-          </div>
+          )}
 
-          {/* Delivery Location */}
+          {/* Delivery Address */}
           {order.customer_addresses && (
-            <div className="p-2 bg-gradient-to-br from-purple-50 to-violet-50 rounded-lg border border-purple-100">
-              <div className="flex items-center gap-2">
-                <div className="p-1 bg-purple-100 rounded-lg">
-                  <MapPin className="h-3 w-3 text-purple-600" />
-                </div>
-                <div className="flex-1">
-                  <div className="text-xs font-semibold text-purple-700 mb-0.5">
-                    To: {order.customer_addresses.building_name}
-                  </div>
-                  <div className="text-xs text-gray-600">
-                    Room {order.customer_addresses.room_number}
-                  </div>
-                </div>
-                <div className="flex items-center gap-1 text-xs text-purple-600">
-                  <Timer className="h-3 w-3" />
-                  <span>15min</span>
-                </div>
+            <div className="text-sm">
+              <p className="font-medium mb-1">Delivery to:</p>
+              <p className="text-muted-foreground">
+                {order.customer_addresses.building_name}
+                {order.customer_addresses.room_number && ` - Room ${order.customer_addresses.room_number}`}
+              </p>
+              {order.customer_addresses.delivery_instructions && (
+                <p className="text-muted-foreground italic text-xs mt-1">
+                  "{order.customer_addresses.delivery_instructions}"
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Order Items - Show first 2 items */}
+          {order.order_items && order.order_items.length > 0 && (
+            <div className="text-sm">
+              <p className="font-medium mb-1">Items:</p>
+              <div className="space-y-1">
+                {order.order_items.slice(0, 2).map((item) => (
+                  <p key={item.id} className="text-muted-foreground text-xs">
+                    {item.quantity}x {item.menu_item?.name || "Item"}
+                  </p>
+                ))}
+                {order.order_items.length > 2 && (
+                  <p className="text-muted-foreground text-xs">
+                    +{order.order_items.length - 2} more items
+                  </p>
+                )}
               </div>
             </div>
           )}
-        </div>
 
-        {/* Enhanced Action Buttons */}
-        <div className="flex items-center gap-2 pt-2 border-t border-gray-100">
-          {showActionButton && onAccept ? (
-            <Button
-              onClick={() => onAccept(order.id)}
-              className="flex-1 h-8 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-semibold rounded-lg shadow-md transition-all duration-300"
-            >
-              <Zap className="h-3 w-3 mr-1" />
-              {actionButtonText}
-            </Button>
-          ) : (
-            <div className="flex-1" />
-          )}
-
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => onViewDetails(order.id)}
-            className="h-8 px-3 border border-orange-200 text-orange-600 hover:bg-orange-50 font-semibold rounded-lg transition-all duration-300"
-          >
-            Details
-            <ChevronRight className="h-3 w-3 ml-1" />
-          </Button>
-        </div>
-
-        {/* Quick Stats Row */}
-        <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-100">
-          <div className="flex items-center gap-3 text-xs text-gray-500">
-            <div className="flex items-center gap-1">
-              <Package className="h-3 w-3" />
-              <span>2 items</span>
+          {/* Amount */}
+          <Separator />
+          <div className="flex justify-between items-center">
+            <div className="flex items-center space-x-2">
+              <CreditCard className="h-4 w-4 text-muted-foreground" />
+              <span className="font-semibold text-lg">
+                R{order.total_amount?.toFixed(2) || "0.00"}
+              </span>
             </div>
-            <div className="flex items-center gap-1">
-              <Timer className="h-3 w-3" />
-              <span>15min</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <MapPin className="h-3 w-3" />
-              <span>1.2km</span>
-            </div>
+            <span className="text-sm text-muted-foreground">
+              Earn: R{runnerBaseFee.toFixed(2)}
+            </span>
           </div>
 
-          <div className="flex items-center gap-1 text-xs text-green-600 font-semibold">
-            <CheckCircle2 className="h-3 w-3" />
-            <span>Paid</span>
-          </div>
+          {/* Action Button */}
+          {renderActionButton()}
         </div>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
-};
+}

@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Package, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from '@/components/ui/use-toast';
 
 interface CollectionPinDisplayProps {
   pin: string;
@@ -31,25 +31,13 @@ export const CollectionPinDisplay: React.FC<CollectionPinDisplayProps> = ({
   };
 
   return (
-    <div className="space-y-3">
-      {/* Alert Banner */}
-      <div className="bg-gradient-to-r from-orange-500 to-amber-500 text-white p-4 rounded-lg shadow-lg animate-pulse">
-        <div className="flex items-center gap-2 justify-center font-semibold">
+    <Card className="border-orange-200 bg-orange-50">
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 text-orange-800">
           <Package className="h-5 w-5" />
-          <span>📍 Collection PIN Ready!</span>
-        </div>
-        <p className="text-center text-sm mt-1 opacity-90">
-          Show this PIN to collect your order
-        </p>
-      </div>
-      
-      <Card className="border-orange-200 bg-orange-50 shadow-lg">
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-orange-800">
-            <Package className="h-5 w-5" />
-            Collection PIN
-          </CardTitle>
-        </CardHeader>
+          Collection PIN
+        </CardTitle>
+      </CardHeader>
       <CardContent>
         <div className="text-center space-y-3">
           <p className="text-sm text-orange-700">
@@ -79,6 +67,5 @@ export const CollectionPinDisplay: React.FC<CollectionPinDisplayProps> = ({
         </div>
       </CardContent>
     </Card>
-    </div>
   );
 };
