@@ -74,7 +74,7 @@ export const MobileEarningsCard = ({ earnings }: MobileEarningsCardProps) => {
                     {stat.title}
                   </p>
                   <p className="text-lg font-bold text-gray-900">
-                    ${stat.amount.toFixed(2)}
+                    R{stat.amount.toFixed(2)}
                   </p>
                   <p className="text-xs text-gray-600">
                     {stat.count} {stat.count === 1 ? 'delivery' : 'deliveries'}
@@ -87,7 +87,7 @@ export const MobileEarningsCard = ({ earnings }: MobileEarningsCardProps) => {
       </div>
       
       {/* Daily Average */}
-      <Card className="border-0 shadow-sm bg-gradient-to-r from-primary to-blue-600 text-white">
+      <Card className="border-0 shadow-sm bg-gradient-to-r from-primary to-primary/90 text-white">
         <CardContent className="p-4">
           <div className="flex items-center justify-between">
             <div>
@@ -95,7 +95,7 @@ export const MobileEarningsCard = ({ earnings }: MobileEarningsCardProps) => {
                 Daily Average
               </p>
               <p className="text-xl font-bold">
-                ${earnings.weekly.count > 0 ? (earnings.weekly.amount / 7).toFixed(2) : '0.00'}
+                R{earnings.weekly.count > 0 ? (earnings.weekly.amount / 7).toFixed(2) : '0.00'}
               </p>
             </div>
             <div className="p-3 bg-white/10 rounded-xl">

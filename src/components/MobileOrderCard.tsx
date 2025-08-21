@@ -87,7 +87,7 @@ export const MobileOrderCard = ({
         {/* Amount Display */}
         <div className="mb-4">
           <div className="flex items-baseline gap-2">
-            <DollarSign className="h-5 w-5 text-green-600 mt-0.5" />
+            <div className="text-sm font-medium text-green-600">R</div>
             <span className="text-2xl font-bold text-gray-900">
               {order.total_amount.toFixed(2)}
             </span>
@@ -140,7 +140,7 @@ export const MobileOrderCard = ({
           {showActionButton && onAccept ? (
             <Button 
               onClick={() => onAccept(order.id)}
-              className="bg-gradient-to-r from-primary to-blue-600 hover:from-primary-600 hover:to-blue-700 text-white px-6 py-2.5 text-sm font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
+              className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-white px-6 py-2.5 text-sm font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
             >
               {actionButtonText}
             </Button>

@@ -53,7 +53,7 @@ export const MobileTabNavigation = ({
   ];
 
   return (
-    <div className="bg-white px-3 py-4 border-b border-gray-100">
+    <div className="sticky top-0 z-40 bg-white px-3 py-4 border-b border-gray-100 shadow-sm">
       <div className="flex gap-2 overflow-x-auto scrollbar-hide">
         {tabs.map((tab) => {
           const Icon = tab.icon;

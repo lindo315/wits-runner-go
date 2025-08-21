@@ -14,7 +14,7 @@ export const MobileBottomNavigation = ({ activeTab, onTabChange }: MobileBottomN
   ];
 
   return (
-    <nav className="bg-white border-t pb-safe">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t pb-safe shadow-lg">
       <div className="flex justify-around py-2">
         {navItems.map((item) => {
           const Icon = item.icon;
@@ -26,12 +26,12 @@ export const MobileBottomNavigation = ({ activeTab, onTabChange }: MobileBottomN
               onClick={() => onTabChange(item.id)}
               className={cn(
                 "flex flex-col items-center py-2 px-4 min-w-0 flex-1",
-                isActive ? "text-red-500" : "text-gray-500"
+                isActive ? "text-primary" : "text-gray-500"
               )}
             >
               <div className={cn(
                 "p-2 rounded-full transition-colors",
-                item.id === "create" && "bg-red-500 text-white"
+                item.id === "create" && "bg-primary text-white"
               )}>
                 <Icon className="h-5 w-5" />
               </div>

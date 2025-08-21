@@ -12,7 +12,7 @@ export const MobileSearchBar = ({
   onChange 
 }: MobileSearchBarProps) => {
   return (
-    <div className="bg-gradient-to-r from-primary to-blue-600 px-4 pb-4">
+    <div className="bg-gradient-to-r from-primary to-primary-600 px-4 pb-4">
       <div className="relative">
         <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
         <input

@@ -21,7 +21,7 @@ export const MobileHeader = ({
   onAvailabilityChange
 }: MobileHeaderProps) => {
   return (
-    <div className="bg-gradient-to-r from-primary to-blue-600 text-white pt-safe">
+    <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-primary to-primary-600 text-white pt-safe">
       {/* Main Header */}
       <header className="px-4 py-4 flex items-center justify-between">
         <h1 className="text-xl font-bold">{title}</h1>

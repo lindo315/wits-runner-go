@@ -818,7 +818,7 @@ const Dashboard = () => {
   // Mobile Layout
   if (isMobile) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex flex-col">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex flex-col pt-20">
         <MobileHeader 
           title="Runner Dashboard"
           onNotificationClick={() => setActiveTab("notifications")}
@@ -843,7 +843,7 @@ const Dashboard = () => {
         />
         
         {/* Mobile Content */}
-        <div className="flex-1 overflow-y-auto pb-20">
+        <div className="flex-1 overflow-y-auto pb-24">
           {activeTab === "available" && (
             <div className="pb-2">
               {!isAvailable && (
