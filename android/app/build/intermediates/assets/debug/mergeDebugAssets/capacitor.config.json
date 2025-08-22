@@ -1,0 +1,10 @@
+{
+	"appId": "app.lovable.witsrunnergo",
+	"appName": "Wits Runner Go",
+	"webDir": "dist",
+	"plugins": {
+		"SplashScreen": {
+			"launchShowDuration": 0
+		}
+	}
+}
