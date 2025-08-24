@@ -414,7 +414,7 @@ const Dashboard = () => {
       const { error: updateError } = await supabase
         .from("orders")
         .update({
-          status: "ready",
+          status: "picked_up",
           runner_id: currentUser.id
         })
         .eq("id", orderId);
