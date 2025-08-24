@@ -455,6 +455,76 @@ const Dashboard = () => {
   
 
   // Order status update handlers
+  const handleMarkPickedUp = async (orderId: string) => {
+    if (!currentUser) return;
+    
+    try {
+      setIsUpdatingOrder(true);
+      setIsLoading(true);
+      console.log("Marking order as picked up...");
+      console.log("Order ID:", orderId);
+      
+      // Update order status
+      const { data, error: updateError } = await supabase
+        .from("orders")
+        .update({ status: "picked_up" })
+        .eq("id", orderId)
+        .eq("runner_id", currentUser.id)
+        .select();
+      
+      if (updateError) {
+        console.error("Error updating order status:", updateError);
+        toast({
+          title: "Update failed",
+          description: `Could not update order status: ${updateError.message}`,
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      // Add to order status history
+      const { error: historyError } = await supabase
+        .from("order_status_history")
+        .insert({
+          order_id: orderId,
+          status: "picked_up",
+          changed_by: currentUser.id,
+          notes: "Order picked up from merchant"
+        });
+      
+      if (historyError) {
+        console.error("Error updating order history:", historyError);
+      }
+      
+      toast({
+        title: "Order updated",
+        description: "Order marked as picked up"
+      });
+      
+      // Update orders in state
+      setOrders(prevOrders => 
+        prevOrders.map(order => 
+          order.id === orderId ? { ...order, status: "picked_up" } : order
+        )
+      );
+      
+      setTimeout(() => {
+        fetchOrders();
+        setIsUpdatingOrder(false);
+      }, 500);
+    } catch (err) {
+      console.error("Error updating order:", err);
+      toast({
+        title: "Update failed",
+        description: "Could not update order status. Please try again.",
+        variant: "destructive"
+      });
+      setIsUpdatingOrder(false);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleMarkInTransit = async (orderId: string) => {
     if (!currentUser) return;
     
@@ -1240,27 +1310,37 @@ const Dashboard = () => {
                                       />
                                     </div>
                                   )}
-                                  
-                                  {/* Mark In Transit button for picked up orders */}
-                                  {order.status === "picked_up" && (
-                                    <Button 
-                                      onClick={() => handleMarkInTransit(order.id)}
-                                      size="lg"
-                                      className="bg-purple-600 hover:bg-purple-700 text-white px-4 sm:px-6 w-full sm:w-auto"
-                                    >
-                                      Mark In Transit
-                                    </Button>
-                                  )}
-                                  
-                                  {order.status === "in_transit" && (
-                                    <Button 
-                                      onClick={() => handleMarkDelivered(order.id)}
-                                      size="lg"
-                                      className="bg-green-600 hover:bg-green-700 text-white px-4 sm:px-6 w-full sm:w-auto"
-                                    >
-                                      Mark Delivered
-                                    </Button>
-                                  )}
+                                   {/* Status update buttons */}
+                                   {order.status === "ready" && (
+                                     <Button 
+                                       onClick={() => handleMarkPickedUp(order.id)}
+                                       size="lg"
+                                       className="bg-blue-600 hover:bg-blue-700 text-white px-4 sm:px-6 w-full sm:w-auto"
+                                     >
+                                       Mark Picked Up
+                                     </Button>
+                                   )}
+                                   
+                                   {/* Mark In Transit button for picked up orders */}
+                                   {order.status === "picked_up" && (
+                                     <Button 
+                                       onClick={() => handleMarkInTransit(order.id)}
+                                       size="lg"
+                                       className="bg-purple-600 hover:bg-purple-700 text-white px-4 sm:px-6 w-full sm:w-auto"
+                                     >
+                                       Mark In Transit
+                                     </Button>
+                                   )}
+                                   
+                                   {order.status === "in_transit" && (
+                                     <Button 
+                                       onClick={() => handleMarkDelivered(order.id)}
+                                       size="lg"
+                                       className="bg-green-600 hover:bg-green-700 text-white px-4 sm:px-6 w-full sm:w-auto"
+                                     >
+                                       Mark Delivered
+                                     </Button>
+                                   )}
                                   
                                   <Button 
                                     variant="outline" 
