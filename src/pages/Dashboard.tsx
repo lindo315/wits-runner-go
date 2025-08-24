@@ -193,10 +193,10 @@ const Dashboard = () => {
       
       switch (activeTab) {
         case "available":
-          // Only show orders that have been accepted by merchants (status = 'ready')
-          console.log("Querying available orders: status = 'ready', runner_id=null");
+          // Show pending and ready orders available for pickup
+          console.log("Querying available orders: status = 'pending' or 'ready', runner_id=null");
           query = query
-            .eq("status", "ready")
+            .in("status", ["pending", "ready"])
             .is("runner_id", null);
           break;
         case "active":
