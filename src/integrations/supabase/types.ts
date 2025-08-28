@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.3 (519615d)"
@@ -139,6 +139,57 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      homepage_banners: {
+        Row: {
+          banner_type: string
+          button_text: string | null
+          button_url: string | null
+          created_at: string
+          description: string | null
+          display_order: number
+          end_date: string | null
+          id: string
+          image_url: string | null
+          is_active: boolean
+          start_date: string | null
+          subtitle: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          banner_type?: string
+          button_text?: string | null
+          button_url?: string | null
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          end_date?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          start_date?: string | null
+          subtitle?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          banner_type?: string
+          button_text?: string | null
+          button_url?: string | null
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          end_date?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          start_date?: string | null
+          subtitle?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       item_options: {
         Row: {
@@ -285,8 +336,89 @@ export type Database = {
           },
         ]
       }
+      merchant_order_updates: {
+        Row: {
+          created_at: string | null
+          id: string
+          merchant_id: string | null
+          new_status: string
+          notes: string | null
+          old_status: string
+          order_id: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          merchant_id?: string | null
+          new_status: string
+          notes?: string | null
+          old_status: string
+          order_id?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          merchant_id?: string | null
+          new_status?: string
+          notes?: string | null
+          old_status?: string
+          order_id?: string | null
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "merchant_order_updates_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "merchant_order_updates_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      merchant_users: {
+        Row: {
+          created_at: string
+          id: string
+          merchant_id: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          merchant_id: string
+          role?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          merchant_id?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "merchant_users_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       merchants: {
         Row: {
+          can_manage_orders: boolean | null
           contact_email: string | null
           contact_phone: string | null
           created_at: string | null
@@ -303,6 +435,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          can_manage_orders?: boolean | null
           contact_email?: string | null
           contact_phone?: string | null
           created_at?: string | null
@@ -319,6 +452,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          can_manage_orders?: boolean | null
           contact_email?: string | null
           contact_phone?: string | null
           created_at?: string | null
@@ -581,11 +715,15 @@ export type Database = {
         Row: {
           cancellation_reason: string | null
           cancelled_at: string | null
+          collection_fee: number | null
+          collection_pin: string | null
           created_at: string | null
           customer_id: string | null
           delivered_at: string | null
           delivery_address_id: string | null
           delivery_fee: number
+          delivery_pin: string | null
+          delivery_type: string | null
           estimated_delivery_time: string | null
           id: string
           merchant_id: string | null
@@ -603,11 +741,15 @@ export type Database = {
         Insert: {
           cancellation_reason?: string | null
           cancelled_at?: string | null
+          collection_fee?: number | null
+          collection_pin?: string | null
           created_at?: string | null
           customer_id?: string | null
           delivered_at?: string | null
           delivery_address_id?: string | null
           delivery_fee: number
+          delivery_pin?: string | null
+          delivery_type?: string | null
           estimated_delivery_time?: string | null
           id?: string
           merchant_id?: string | null
@@ -625,11 +767,15 @@ export type Database = {
         Update: {
           cancellation_reason?: string | null
           cancelled_at?: string | null
+          collection_fee?: number | null
+          collection_pin?: string | null
           created_at?: string | null
           customer_id?: string | null
           delivered_at?: string | null
           delivery_address_id?: string | null
           delivery_fee?: number
+          delivery_pin?: string | null
+          delivery_type?: string | null
           estimated_delivery_time?: string | null
           id?: string
           merchant_id?: string | null
@@ -741,6 +887,81 @@ export type Database = {
           max_orders?: number
           name?: string
           start_date?: string | null
+        }
+        Relationships: []
+      }
+      push_notification_preferences: {
+        Row: {
+          created_at: string
+          delivery_alerts: boolean
+          feedback_requests: boolean
+          id: string
+          order_updates: boolean
+          promotions: boolean
+          quiet_hours_enabled: boolean
+          quiet_hours_end: string
+          quiet_hours_start: string
+          sound_enabled: boolean
+          updated_at: string
+          user_id: string
+          vibration_enabled: boolean
+        }
+        Insert: {
+          created_at?: string
+          delivery_alerts?: boolean
+          feedback_requests?: boolean
+          id?: string
+          order_updates?: boolean
+          promotions?: boolean
+          quiet_hours_enabled?: boolean
+          quiet_hours_end?: string
+          quiet_hours_start?: string
+          sound_enabled?: boolean
+          updated_at?: string
+          user_id: string
+          vibration_enabled?: boolean
+        }
+        Update: {
+          created_at?: string
+          delivery_alerts?: boolean
+          feedback_requests?: boolean
+          id?: string
+          order_updates?: boolean
+          promotions?: boolean
+          quiet_hours_enabled?: boolean
+          quiet_hours_end?: string
+          quiet_hours_start?: string
+          sound_enabled?: boolean
+          updated_at?: string
+          user_id?: string
+          vibration_enabled?: boolean
+        }
+        Relationships: []
+      }
+      push_notification_tokens: {
+        Row: {
+          created_at: string
+          id: string
+          platform: string
+          token: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          platform: string
+          token: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          platform?: string
+          token?: string
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -1158,18 +1379,22 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_order_as_runner: {
+        Args: { order_id: string; runner_user_id: string }
+        Returns: boolean
+      }
       add_wallet_credits: {
         Args: {
-          p_user_id: string
           p_amount: number
           p_description?: string
-          p_reference_type?: string
           p_reference_id?: string
+          p_reference_type?: string
+          p_user_id: string
         }
         Returns: boolean
       }
       assign_user_role: {
-        Args: { target_user_id: string; new_role: string }
+        Args: { new_role: string; target_user_id: string }
         Returns: boolean
       }
       cancel_unaccepted_orders: {
@@ -1178,13 +1403,17 @@ export type Database = {
       }
       deduct_wallet_credits: {
         Args: {
-          p_user_id: string
           p_amount: number
           p_description?: string
-          p_reference_type?: string
           p_reference_id?: string
+          p_reference_type?: string
+          p_user_id: string
         }
         Returns: boolean
+      }
+      generate_delivery_pin: {
+        Args: Record<PropertyKey, never>
+        Returns: string
       }
       get_admin_dashboard_stats: {
         Args: Record<PropertyKey, never>
@@ -1198,23 +1427,99 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      get_merchant_admin_data: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          account_name: string
+          account_number: string
+          bank_code: string
+          bank_name: string
+          bank_verification_status: string
+          contact_email: string
+          contact_phone: string
+          created_at: string
+          delivery_fee: number
+          description: string
+          id: string
+          image_url: string
+          is_active: boolean
+          location: string
+          minimum_order: number
+          name: string
+          opening_hours: Json
+          paystack_subaccount_code: string
+          preparation_time_minutes: number
+          updated_at: string
+        }[]
+      }
       get_or_create_wallet: {
         Args: { p_user_id: string }
         Returns: string
       }
+      get_public_merchant_info: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          created_at: string
+          delivery_fee: number
+          description: string
+          id: string
+          image_url: string
+          is_active: boolean
+          location: string
+          minimum_order: number
+          name: string
+          opening_hours: Json
+          preparation_time_minutes: number
+          updated_at: string
+        }[]
+      }
+      get_public_merchants: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          created_at: string
+          delivery_fee: number
+          description: string
+          id: string
+          image_url: string
+          is_active: boolean
+          location: string
+          minimum_order: number
+          name: string
+          opening_hours: Json
+          preparation_time_minutes: number
+          updated_at: string
+        }[]
+      }
+      get_safe_merchant_data: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          created_at: string
+          delivery_fee: number
+          description: string
+          id: string
+          image_url: string
+          is_active: boolean
+          location: string
+          minimum_order: number
+          name: string
+          opening_hours: Json
+          preparation_time_minutes: number
+          updated_at: string
+        }[]
+      }
       get_user_profile: {
         Args: { user_id: string }
         Returns: {
-          id: string
+          created_at: string
           email: string
-          role: string
-          verification_status: string
           first_name: string
+          id: string
           last_name: string
           phone_number: string
+          role: string
           student_number: string
-          created_at: string
           updated_at: string
+          verification_status: string
         }[]
       }
       increment_promotional_discounts: {
@@ -1234,22 +1539,22 @@ export type Database = {
         Returns: boolean
       }
       log_security_event: {
-        Args: { event_type: string; details?: Json }
+        Args: { details?: Json; event_type: string }
         Returns: undefined
       }
       refund_wallet_credits: {
         Args: {
-          p_user_id: string
           p_amount: number
           p_description?: string
           p_reference_id?: string
+          p_user_id: string
         }
         Returns: boolean
       }
       send_promotional_notifications: {
         Args: {
-          campaign_title: string
           campaign_message: string
+          campaign_title: string
           target_role?: string
         }
         Returns: number
